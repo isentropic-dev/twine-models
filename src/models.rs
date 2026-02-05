@@ -4,9 +4,9 @@
 //!
 //! # Organization
 //!
-//! Models are organized into domain-specific submodules (e.g., `turbomachinery`,
-//! `controllers`, `thermal`) based on an opinionated taxonomy. This organization
-//! may evolve as more models are added.
+//! Models are organized into domain-specific submodules (e.g., `thermal`,
+//! `turbomachinery`, `controllers`) based on an opinionated taxonomy.
+//! This organization may evolve as more models are added.
 //!
 //! # Model structure
 //!
@@ -16,4 +16,5 @@
 //!
 //! The [`twine_core::Model`] implementation should be a thin adapter that
 //! delegates to the model-specific core API. A single `core` may be exposed
-//! through multiple adapters (e.g., different wrapper types implementing `Model`).
+//! through multiple adapters (e.g., different wrapper types implementing
+//! [`twine_core::Model`]).

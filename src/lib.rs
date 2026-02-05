@@ -8,20 +8,23 @@
 //! - [`models`]: Public, domain-specific [`twine_core::Model`] implementations.
 //! - [`support`]: Supporting utilities used by models.
 //!
-//! ## Stability and code lifecycle
+//! ## Utility code lifecycle
 //!
-//! Modules in [`support`] are published because they're useful, but their APIs
-//! are not stable. Breaking changes may occur as needed.
+//! Modules in [`support`] are part of the public API because they're useful,
+//! but their APIs are not stable. Breaking changes may occur as needed.
 //!
-//! Code in this crate follows a natural progression as needs emerge:
+//! Utility code in this crate follows a natural progression as needs emerge:
 //!
 //! 1. **Model-specific**: Starts in a model's internal `core` module
 //! 2. **Domain-specific**: If useful across models in a domain (e.g., `turbomachinery`),
-//!    it may be promoted to a domain-level support module
+//!    it moves to a domain-level support module
 //! 3. **Crate-level**: If useful across multiple domains or potentially useful
-//!    outside this crate, it may move to [`support`]
+//!    outside this crate, it moves to [`support`]
 //! 4. **Standalone**: If broadly useful and stable, it may become its own crate
 //!    (and be removed here in a future release)
+//!
+//! Note: Only utilities at the crate-level (in [`support`]) are part of the public API.
+//! Model-specific and domain-specific utility code remains private.
 
 pub mod models;
 pub mod support;
