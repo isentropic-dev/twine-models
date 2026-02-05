@@ -6,6 +6,10 @@ authors = ["Isentropic Development <info@isentropic.dev>"]
 license = "MIT"
 repository = "https://github.com/isentropic-dev/twine-models"
 readme = "README.md"
-description = "Opinionated, domain-specific models and model-building tools for Twine"
+description = "Domain-specific models and model-building tools for Twine"
 
 [dependencies]
+num-traits = "0.2"
+thiserror = "2.0"
+twine-core = { path = "../twine/crates/core" }
+uom = "0.36"
