@@ -5,7 +5,7 @@
 //!
 //! ## Crate layout
 //!
-//! - [`models`]: Public, domain-specific [`twine_core::Model`] implementations.
+//! - [`models`]: Domain-specific [`twine_core::Model`] implementations.
 //! - [`support`]: Supporting utilities used by models.
 //!
 //! ## Utility code lifecycle
