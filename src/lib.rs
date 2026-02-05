@@ -21,7 +21,7 @@
 //! 3. **Crate-level**: If useful across multiple domains or potentially useful
 //!    outside this crate, it moves to [`support`]
 //! 4. **Standalone**: If broadly useful and stable, it may become its own crate
-//!    (and be removed here in a future release)
+//!    (and be removed from here in a future release)
 //!
 //! Note: Only utilities at the crate-level (in [`support`]) are part of the public API.
 //! Model-specific and domain-specific utility code remains private.
