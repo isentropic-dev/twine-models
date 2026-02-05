@@ -10,9 +10,10 @@
 //!
 //! # Model structure
 //!
-//! Each model lives in its own module and contains an internal `core` submodule
-//! where the actual computation and domain logic lives. The `core` module is an
-//! implementation detail and is **not** re-exported as part of the public API.
+//! Related models are grouped in their own modules. Each model module contains an
+//! internal `core` submodule where the actual computation and domain logic lives.
+//! The `core` module is an implementation detail and is **not** part of the
+//! model's public API.
 //!
 //! The [`twine_core::Model`] implementation should be a thin adapter that
 //! delegates to the model-specific core API. A single `core` may be exposed
