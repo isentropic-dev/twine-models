@@ -11,5 +11,6 @@ description = "Domain-specific models and model-building tools for Twine"
 [dependencies]
 num-traits = "0.2"
 thiserror = "2.0"
-twine-core = { path = "../twine/crates/core" }
+# TODO: Switch to version dependency once twine-core 0.5 is published to crates.io
+twine-core = { git = "https://github.com/isentropic-dev/twine.git", branch = "main" }
 uom = "0.36"
