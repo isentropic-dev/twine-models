@@ -7,7 +7,7 @@
 //! These types ensure values always satisfy the required numeric constraints,
 //! leading to safer and more self-documenting designs.
 //!
-//! # Provided Constraints
+//! # Provided constraints
 //!
 //! The following marker types are available:
 //!
