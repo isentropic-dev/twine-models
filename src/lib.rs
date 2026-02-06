@@ -1,7 +1,10 @@
 //! # Twine Models
 //!
-//! Opinionated, domain-specific models and model-building tools for
+//! Domain-specific models and model-building tools for
 //! [Twine](https://github.com/isentropic-dev/twine).
+//!
+//! This crate provides opinionated model implementations and supporting
+//! utilities organized around engineering domains.
 //!
 //! ## Crate layout
 //!
