@@ -11,4 +11,3 @@ pub mod model;
 
 pub use error::PropertyError;
 pub use state::State;
-// pub use state::StateDerivative;  // TODO: Needs TimeDerivative/TimeIntegrable

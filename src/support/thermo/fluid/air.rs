@@ -10,15 +10,6 @@ use crate::support::units::SpecificGasConstant;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Air;
 
-// TODO: Add TimeIntegrable impl when available in twine_core
-// impl TimeIntegrable for Air {
-//     type Derivative = ();
-//
-//     fn step(self, _derivative: Self::Derivative, _dt: Time) -> Self {
-//         self
-//     }
-// }
-
 impl PerfectGasFluid for Air {
     fn parameters() -> PerfectGasParameters {
         PerfectGasParameters::new(
