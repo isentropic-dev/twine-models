@@ -1,7 +1,4 @@
-use uom::si::{
-    f64::SpecificHeatCapacity,
-    specific_heat_capacity::joule_per_kilogram_kelvin,
-};
+use uom::si::{f64::SpecificHeatCapacity, specific_heat_capacity::joule_per_kilogram_kelvin};
 
 use crate::support::thermo::model::perfect_gas::{PerfectGasFluid, PerfectGasParameters};
 use crate::support::units::SpecificGasConstant;

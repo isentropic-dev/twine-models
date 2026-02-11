@@ -4,7 +4,9 @@ use uom::si::{
     specific_heat_capacity::kilojoule_per_kilogram_kelvin,
 };
 
-use crate::support::thermo::model::incompressible::{IncompressibleFluid, IncompressibleParameters};
+use crate::support::thermo::model::incompressible::{
+    IncompressibleFluid, IncompressibleParameters,
+};
 
 /// Canonical identifier for water.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
