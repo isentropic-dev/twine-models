@@ -28,7 +28,7 @@ impl PerfectGasFluid for CarbonDioxide {
 }
 
 #[cfg(feature = "coolprop")]
-impl crate::model::coolprop::CoolPropFluid for CarbonDioxide {
+impl crate::support::thermo::model::coolprop::CoolPropFluid for CarbonDioxide {
     const BACKEND: &'static str = "HEOS";
     const NAME: &'static str = "CarbonDioxide";
 }

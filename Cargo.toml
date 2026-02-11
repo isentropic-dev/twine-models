@@ -17,7 +17,7 @@ twine-core = { git = "https://github.com/isentropic-dev/twine.git", branch = "ma
 uom = "0.36"
 
 [features]
-default = []
+default = ["coolprop"]
 coolprop = ["dep:rfluids"]
 
 [dev-dependencies]

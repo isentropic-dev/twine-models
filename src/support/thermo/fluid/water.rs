@@ -28,7 +28,7 @@ impl IncompressibleFluid for Water {
 }
 
 #[cfg(feature = "coolprop")]
-impl crate::model::coolprop::CoolPropFluid for Water {
+impl crate::support::thermo::model::coolprop::CoolPropFluid for Water {
     const BACKEND: &'static str = "HEOS";
     const NAME: &'static str = "Water";
 }
