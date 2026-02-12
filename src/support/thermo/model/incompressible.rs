@@ -33,10 +33,13 @@ use uom::{
     },
 };
 
-use crate::support::thermo::{
-    PropertyError, State,
-    capability::{
-        HasCp, HasCv, HasEnthalpy, HasEntropy, HasInternalEnergy, StateFrom, ThermoModel,
+use crate::support::{
+    constraint::{Constraint, StrictlyPositive},
+    thermo::{
+        PropertyError, State,
+        capability::{
+            HasCp, HasCv, HasEnthalpy, HasEntropy, HasInternalEnergy, StateFrom, ThermoModel,
+        },
     },
 };
 use crate::support::units::{
@@ -133,17 +136,17 @@ impl<Fluid> Incompressible<Fluid> {
     {
         let parameters = Fluid::parameters();
         let cp = parameters.cp;
-        if !is_strictly_positive(cp.value) {
+        if StrictlyPositive::check(&cp.value).is_err() {
             return Err(IncompressibleParametersError::Cp { cp });
         }
 
         let t_ref = parameters.reference.temperature;
-        if !is_strictly_positive(t_ref.value) {
+        if StrictlyPositive::check(&t_ref.value).is_err() {
             return Err(IncompressibleParametersError::ReferenceTemperature { t_ref });
         }
 
         let rho_ref = parameters.reference.density;
-        if !is_strictly_positive(rho_ref.value) {
+        if StrictlyPositive::check(&rho_ref.value).is_err() {
             return Err(IncompressibleParametersError::ReferenceDensity { rho_ref });
         }
 
@@ -252,11 +255,6 @@ impl<Fluid: Default> StateFrom<ThermodynamicTemperature> for Incompressible<Flui
     ) -> Result<State<Fluid>, Self::Error> {
         self.state_from((Fluid::default(), temperature))
     }
-}
-
-/// Returns `true` if `value` is not `NaN` and greater than zero.
-fn is_strictly_positive(value: f64) -> bool {
-    !value.is_nan() && value > 0.0
 }
 
 #[cfg(test)]

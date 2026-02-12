@@ -34,11 +34,14 @@ use uom::{
     },
 };
 
-use crate::support::thermo::{
-    PropertyError, State,
-    capability::{
-        HasCp, HasCv, HasEnthalpy, HasEntropy, HasInternalEnergy, HasPressure, StateFrom,
-        ThermoModel,
+use crate::support::{
+    constraint::{Constraint, StrictlyPositive},
+    thermo::{
+        PropertyError, State,
+        capability::{
+            HasCp, HasCv, HasEnthalpy, HasEntropy, HasInternalEnergy, HasPressure, StateFrom,
+            ThermoModel,
+        },
     },
 };
 use crate::support::units::{
@@ -149,31 +152,31 @@ impl<Fluid: PerfectGasFluid> PerfectGas<Fluid> {
         let parameters = Fluid::parameters();
 
         let gas_constant = parameters.gas_constant;
-        if !is_strictly_positive(gas_constant.value) {
+        if StrictlyPositive::check(&gas_constant.value).is_err() {
             return Err(PerfectGasParametersError::GasConstant { r: gas_constant });
         }
 
         let cp = parameters.cp;
-        if !is_strictly_positive(cp.value) {
+        if StrictlyPositive::check(&cp.value).is_err() {
             return Err(PerfectGasParametersError::Cp { cp });
         }
 
         let reference_temperature = parameters.reference.temperature;
-        if !is_strictly_positive(reference_temperature.value) {
+        if StrictlyPositive::check(&reference_temperature.value).is_err() {
             return Err(PerfectGasParametersError::ReferenceTemperature {
                 t_ref: reference_temperature,
             });
         }
 
         let reference_pressure = parameters.reference.pressure;
-        if !is_strictly_positive(reference_pressure.value) {
+        if StrictlyPositive::check(&reference_pressure.value).is_err() {
             return Err(PerfectGasParametersError::ReferencePressure {
                 p_ref: reference_pressure,
             });
         }
 
         let cv = cp - gas_constant;
-        if !is_strictly_positive(cv.value) {
+        if StrictlyPositive::check(&cv.value).is_err() {
             return Err(PerfectGasParametersError::NonPhysicalCv {
                 r: gas_constant,
                 cp,
@@ -390,11 +393,6 @@ impl<Fluid> StateFrom<(Fluid, SpecificEnthalpy, SpecificEntropy)> for PerfectGas
             fluid,
         })
     }
-}
-
-/// Returns `true` if `value` is not `NaN` and greater than zero.
-fn is_strictly_positive(value: f64) -> bool {
-    !value.is_nan() && value > 0.0
 }
 
 #[cfg(test)]
