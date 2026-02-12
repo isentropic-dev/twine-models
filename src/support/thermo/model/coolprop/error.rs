@@ -31,10 +31,15 @@ impl From<CoolPropError> for PropertyError {
     }
 }
 
-/// The `rfluids::native::CoolPropError` type reports errors as strings,
-/// and the wording may change over time.
-/// This mapping aims to provide the most useful `PropertyError` variant.
-/// Unknown error strings default to `PropertyError::Calculation`.
+/// Maps an `rfluids` error message to a [`PropertyError`] variant.
+///
+/// The `rfluids` crate exposes CoolProp errors as opaque strings with no
+/// structured error codes. This function uses substring matching to classify
+/// errors into appropriate [`PropertyError`] variants on a best-effort basis.
+///
+/// If the message doesn't match any known pattern, it falls back to
+/// [`PropertyError::Calculation`], preserving the original message for
+/// debugging.
 fn map_error_message(message: &str) -> PropertyError {
     const UNDEFINED_MARKERS: &[&str] = &["not defined"];
     const OUT_OF_DOMAIN_MARKERS: &[&str] = &[
