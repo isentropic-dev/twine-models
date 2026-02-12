@@ -177,7 +177,8 @@ where
 ///
 /// Uses `MaybeUninit` to build the array without heap allocation while
 /// preserving the ability to return early on thermodynamic errors.
-/// This is the idiomatic approach for fallible array construction in Rust.
+/// `std::array::from_fn` can't propagate errors without heap allocation
+/// until `std::array::try_from_fn` stabilizes (rust#89379).
 fn build_states<Fluid, const N: usize>(
     thermo: &impl StateFrom<(Fluid, Pressure, SpecificEnthalpy), Fluid = Fluid>,
     side: &'static str,
@@ -214,8 +215,9 @@ where
     }
 
     // Safety: All N elements have been initialized:
-    // - Endpoints at inlet_index and outlet_index (always 0 and N-1)
-    // - Interior nodes at 1..(N-1) in the loop
+    // - inlet_index and outlet_index are always 0 and N-1 (covers both endpoints)
+    // - Loop initializes indices 1..(N-1) (covers all interior nodes)
+    // Together these cover exactly [0, N), so the full array is initialized.
     // MaybeUninit<T> has the same memory layout as T, so this cast is safe.
     let states_ptr = (&raw const states).cast::<[State<Fluid>; N]>();
     Ok(unsafe { states_ptr.read() })
