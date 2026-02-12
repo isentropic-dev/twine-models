@@ -281,6 +281,18 @@ impl<F: CoolPropFluid> StateFrom<(F, SpecificEnthalpy, SpecificEntropy)> for Coo
     }
 }
 
+// Static assertion: CoolProp<F> must be Send + Sync for any CoolPropFluid.
+// Thread-safety is provided by rfluids, which serializes all CoolProp FFI calls
+// through a global mutex. Our local Mutex<AbstractState> provides interior
+// mutability and keeps update/query call pairs atomic.
+#[allow(dead_code)]
+const _: () = {
+    fn assert_send_sync<T: Send + Sync>() {}
+    fn check<F: CoolPropFluid>() {
+        assert_send_sync::<CoolProp<F>>();
+    }
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
