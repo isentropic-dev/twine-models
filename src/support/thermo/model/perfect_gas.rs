@@ -28,12 +28,17 @@ use uom::{
     ConstZero,
     si::{
         f64::{MassDensity, Pressure, SpecificHeatCapacity, ThermodynamicTemperature},
-        pressure::atmosphere,
+        pressure::{atmosphere, pascal},
         ratio::ratio,
-        thermodynamic_temperature::degree_celsius,
+        specific_heat_capacity::joule_per_kilogram_kelvin,
+        thermodynamic_temperature::{degree_celsius, kelvin},
     },
 };
 
+use crate::support::units::{
+    SpecificEnthalpy, SpecificEntropy, SpecificGasConstant, SpecificInternalEnergy,
+    TemperatureDifference,
+};
 use crate::support::{
     constraint::{Constraint, StrictlyPositive},
     thermo::{
@@ -43,10 +48,6 @@ use crate::support::{
             ThermoModel,
         },
     },
-};
-use crate::support::units::{
-    SpecificEnthalpy, SpecificEntropy, SpecificGasConstant, SpecificInternalEnergy,
-    TemperatureDifference,
 };
 
 use super::ideal_gas_eos;
@@ -152,31 +153,31 @@ impl<Fluid: PerfectGasFluid> PerfectGas<Fluid> {
         let parameters = Fluid::parameters();
 
         let gas_constant = parameters.gas_constant;
-        if StrictlyPositive::check(&gas_constant.value).is_err() {
+        if StrictlyPositive::check(&gas_constant.get::<joule_per_kilogram_kelvin>()).is_err() {
             return Err(PerfectGasParametersError::GasConstant { r: gas_constant });
         }
 
         let cp = parameters.cp;
-        if StrictlyPositive::check(&cp.value).is_err() {
+        if StrictlyPositive::check(&cp.get::<joule_per_kilogram_kelvin>()).is_err() {
             return Err(PerfectGasParametersError::Cp { cp });
         }
 
         let reference_temperature = parameters.reference.temperature;
-        if StrictlyPositive::check(&reference_temperature.value).is_err() {
+        if StrictlyPositive::check(&reference_temperature.get::<kelvin>()).is_err() {
             return Err(PerfectGasParametersError::ReferenceTemperature {
                 t_ref: reference_temperature,
             });
         }
 
         let reference_pressure = parameters.reference.pressure;
-        if StrictlyPositive::check(&reference_pressure.value).is_err() {
+        if StrictlyPositive::check(&reference_pressure.get::<pascal>()).is_err() {
             return Err(PerfectGasParametersError::ReferencePressure {
                 p_ref: reference_pressure,
             });
         }
 
         let cv = cp - gas_constant;
-        if StrictlyPositive::check(&cv.value).is_err() {
+        if StrictlyPositive::check(&cv.get::<joule_per_kilogram_kelvin>()).is_err() {
             return Err(PerfectGasParametersError::NonPhysicalCv {
                 r: gas_constant,
                 cp,

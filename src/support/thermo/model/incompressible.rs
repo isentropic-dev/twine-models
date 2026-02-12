@@ -29,10 +29,15 @@ use uom::{
     ConstZero,
     si::{
         f64::{MassDensity, SpecificHeatCapacity, ThermodynamicTemperature},
-        thermodynamic_temperature::degree_celsius,
+        mass_density::kilogram_per_cubic_meter,
+        specific_heat_capacity::joule_per_kilogram_kelvin,
+        thermodynamic_temperature::{degree_celsius, kelvin},
     },
 };
 
+use crate::support::units::{
+    SpecificEnthalpy, SpecificEntropy, SpecificInternalEnergy, TemperatureDifference,
+};
 use crate::support::{
     constraint::{Constraint, StrictlyPositive},
     thermo::{
@@ -41,9 +46,6 @@ use crate::support::{
             HasCp, HasCv, HasEnthalpy, HasEntropy, HasInternalEnergy, StateFrom, ThermoModel,
         },
     },
-};
-use crate::support::units::{
-    SpecificEnthalpy, SpecificEntropy, SpecificInternalEnergy, TemperatureDifference,
 };
 
 #[derive(Debug, Error, Clone, PartialEq)]
@@ -136,17 +138,17 @@ impl<Fluid> Incompressible<Fluid> {
     {
         let parameters = Fluid::parameters();
         let cp = parameters.cp;
-        if StrictlyPositive::check(&cp.value).is_err() {
+        if StrictlyPositive::check(&cp.get::<joule_per_kilogram_kelvin>()).is_err() {
             return Err(IncompressibleParametersError::Cp { cp });
         }
 
         let t_ref = parameters.reference.temperature;
-        if StrictlyPositive::check(&t_ref.value).is_err() {
+        if StrictlyPositive::check(&t_ref.get::<kelvin>()).is_err() {
             return Err(IncompressibleParametersError::ReferenceTemperature { t_ref });
         }
 
         let rho_ref = parameters.reference.density;
-        if StrictlyPositive::check(&rho_ref.value).is_err() {
+        if StrictlyPositive::check(&rho_ref.get::<kilogram_per_cubic_meter>()).is_err() {
             return Err(IncompressibleParametersError::ReferenceDensity { rho_ref });
         }
 

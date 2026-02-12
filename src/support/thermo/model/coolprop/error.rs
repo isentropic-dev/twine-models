@@ -33,7 +33,7 @@ impl From<CoolPropError> for PropertyError {
 
 /// Maps an `rfluids` error message to a [`PropertyError`] variant.
 ///
-/// The `rfluids` crate exposes CoolProp errors as opaque strings with no
+/// The `rfluids` crate exposes `CoolProp` errors as opaque strings with no
 /// structured error codes. This function uses substring matching to classify
 /// errors into appropriate [`PropertyError`] variants on a best-effort basis.
 ///
