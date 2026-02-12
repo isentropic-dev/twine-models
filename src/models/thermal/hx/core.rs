@@ -4,6 +4,10 @@
 //! constant-property sub-exchangers so thermodynamic properties can vary
 //! along a linear array of nodes, supporting real-fluid behavior.
 
+// This module is internal infrastructure for Model adapters (issue #14).
+// Dead code warnings are expected until adapters consume this API.
+#![allow(dead_code)]
+
 mod given_ua;
 mod heat_transfer_rate;
 mod input;
