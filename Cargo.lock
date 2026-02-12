@@ -262,7 +262,7 @@ dependencies = [
 [[package]]
 name = "twine-core"
 version = "0.5.0"
-source = "git+https://github.com/isentropic-dev/twine.git?branch=main#3050a17cd6e9fe7c3f00050839bf3a26176aa04d"
+source = "git+https://github.com/isentropic-dev/twine.git?branch=main#e624fc88e5c6b916837e9a3d8b37535d99d28325"
 
 [[package]]
 name = "twine-models"
@@ -273,7 +273,17 @@ dependencies = [
  "rfluids",
  "thiserror",
  "twine-core",
+ "twine-solvers",
  "uom",
+]
+
+[[package]]
+name = "twine-solvers"
+version = "0.5.0"
+source = "git+https://github.com/isentropic-dev/twine.git?branch=main#e624fc88e5c6b916837e9a3d8b37535d99d28325"
+dependencies = [
+ "thiserror",
+ "twine-core",
 ]
 
 [[package]]
