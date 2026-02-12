@@ -12,7 +12,7 @@ pub use config::GivenUaConfig;
 pub use error::GivenUaError;
 
 use crate::support::constraint::{Constrained, NonNegative};
-use twine_solvers::equation::bisection;
+use twine_solvers::equation::{EvalError, bisection};
 use uom::{
     ConstZero,
     si::{
@@ -22,7 +22,7 @@ use uom::{
 };
 
 use super::{
-    Given, HeatTransferRate, Known, Results,
+    Given, HeatTransferRate, Known, Results, SolveError,
     traits::{DiscretizedArrangement, DiscretizedHxThermoModel},
 };
 
@@ -80,13 +80,7 @@ where
         ],
         &config.bisection(),
         |event: &bisection::Event<'_, _, _>| {
-            // TODO: Match specifically on SecondLawViolation once EvalError is public
-            // (see https://github.com/isentropic-dev/twine/issues/235)
-            //
-            // Currently catches all errors because EvalError is pub(crate) in twine-solvers.
-            // This means thermo model failures are also recovered from, which may hide
-            // errors that users should see.
-            if event.result().is_err() {
+            if let Err(EvalError::Model(SolveError::SecondLawViolation { .. })) = event.result() {
                 return Some(bisection::Action::assume_positive());
             }
             None
