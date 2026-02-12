@@ -22,3 +22,7 @@ coolprop = ["dep:rfluids"]
 
 [dev-dependencies]
 approx = "0.5"
+
+[lints.clippy]
+# Enforce `foo.rs` + `foo/` module style over `foo/mod.rs`
+mod_module_files = "deny"
