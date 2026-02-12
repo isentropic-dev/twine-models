@@ -38,6 +38,10 @@ pub trait HasEnthalpy: ThermoModel {
 pub trait HasEntropy: ThermoModel {
     /// Returns the specific entropy for the given state.
     ///
+    /// The computation depends on the model's assumptions. For example,
+    /// ideal gas models include a pressure term while incompressible
+    /// liquid models do not.
+    ///
     /// # Errors
     ///
     /// Returns [`PropertyError`] if the entropy cannot be calculated.
