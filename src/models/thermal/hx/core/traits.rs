@@ -29,6 +29,14 @@ pub trait DiscretizedArrangement: NtuRelation {
     /// Selects a value based on bottom stream flow direction.
     ///
     /// Returns `forward` if the bottom stream flows left-to-right, `reverse` otherwise.
+    ///
+    /// ```ignore
+    /// // CounterFlow: bottom flows right-to-left, so selects `reverse`
+    /// assert_eq!(CounterFlow::bottom_select("forward", "reverse"), "reverse");
+    ///
+    /// // ParallelFlow: bottom flows left-to-right, so selects `forward`
+    /// assert_eq!(ParallelFlow::bottom_select("forward", "reverse"), "forward");
+    /// ```
     #[inline]
     fn bottom_select<T>(forward: T, reverse: T) -> T {
         if Self::BOTTOM_FLOWS_LEFT_TO_RIGHT {
