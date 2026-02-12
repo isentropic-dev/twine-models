@@ -2,6 +2,8 @@
 
 use std::marker::PhantomData;
 
+use thiserror::Error;
+
 use crate::support::hx::{
     CapacitanceRate, Effectiveness, Ntu,
     effectiveness_ntu::{EffectivenessRelation, NtuRelation, effectiveness_via, ntu_via},
@@ -99,15 +101,19 @@ impl<const S: u16, const T: u16> NtuRelation for ShellAndTube<S, T> {
 }
 
 /// Errors returned when constructing a [`ShellAndTube`] arrangement.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
 pub enum ShellAndTubeConfigError {
     /// No shell passes were configured.
+    #[error("shell pass count must be at least 1")]
     ZeroShellPasses,
     /// The requested shell pass count is too large to validate.
+    #[error("shell pass count is too large")]
     ShellPassOverflow,
     /// Tube passes are fewer than twice the shell passes.
+    #[error("tube passes must be at least twice the shell passes")]
     InsufficientTubePasses,
     /// Tube passes are not an even multiple of shell passes.
+    #[error("tube passes must be an even multiple of shell passes")]
     TubePassesNotMultiple,
 }
 

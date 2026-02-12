@@ -1,7 +1,9 @@
 //! Functional helpers for common heat exchanger calculations.
 
-use crate::support::constraint::ConstraintResult;
-use crate::support::units::TemperatureDifference;
+use crate::support::{
+    constraint::{ConstraintError, ConstraintResult},
+    units::TemperatureDifference,
+};
 use uom::{
     ConstZero,
     si::f64::{Power, ThermalConductance},
@@ -73,7 +75,8 @@ pub struct KnownConductanceResult {
 /// # Errors
 ///
 /// Returns `Err` if any supplied quantity violates its constraints (for
-/// example, a non-positive capacitance rate).
+/// example, a non-positive capacitance rate, or a non-zero heat flow when
+/// both inlets have the same temperature).
 pub fn known_conditions_and_inlets(
     arrangement: &impl NtuRelation,
     streams: (StreamInlet, Stream),
@@ -83,8 +86,25 @@ pub fn known_conditions_and_inlets(
 
     // Doesn't matter which stream we use to get max heat flow. Magnitude is the same.
     let max_heat_flow = streams_with_max_heat[0].heat_flow.signed().abs();
-    let effectiveness =
-        Effectiveness::from_quantity(streams.1.heat_flow.signed().abs() / max_heat_flow)?;
+    let actual_heat_flow = streams.1.heat_flow.signed().abs();
+
+    // When inlet temperatures are equal, max_heat_flow is zero.
+    // If actual heat flow is also zero, effectiveness is indeterminate but
+    // we return zero (no heat exchanged). If actual heat flow is non-zero,
+    // this is physically impossible.
+    if max_heat_flow == Power::ZERO {
+        if actual_heat_flow != Power::ZERO {
+            return Err(ConstraintError::AboveMaximum);
+        }
+        let ntu = Ntu::new(0.0)?;
+        return Ok(KnownConditionsResult {
+            streams: [streams.0.with_heat_flow(HeatFlow::None), streams.1],
+            ua: ThermalConductance::ZERO,
+            ntu,
+        });
+    }
+
+    let effectiveness = Effectiveness::from_quantity(actual_heat_flow / max_heat_flow)?;
 
     let ntu = arrangement.ntu(effectiveness, capacitance_rates);
 

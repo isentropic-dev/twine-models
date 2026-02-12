@@ -23,26 +23,7 @@ impl StreamInlet {
     }
 
     pub(crate) fn with_heat_flow(self, heat_flow: HeatFlow) -> Stream {
-        Stream {
-            capacitance_rate: self.capacitance_rate,
-            inlet_temperature: self.temperature,
-            heat_flow,
-            outlet_temperature: {
-                if self.capacitance_rate.is_infinite() {
-                    self.temperature
-                } else {
-                    match heat_flow {
-                        HeatFlow::In(heat_flow) => {
-                            self.temperature + (heat_flow.into_inner() / *self.capacitance_rate)
-                        }
-                        HeatFlow::Out(heat_flow) => {
-                            self.temperature - (heat_flow.into_inner() / *self.capacitance_rate)
-                        }
-                        HeatFlow::None => self.temperature,
-                    }
-                }
-            },
-        }
+        Stream::new_from_heat_flow(self.capacitance_rate, self.temperature, heat_flow)
     }
 }
 
