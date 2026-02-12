@@ -19,3 +19,5 @@
 //! delegates to the model-specific core API. A single `core` may be exposed
 //! through multiple adapters (e.g., different wrapper types implementing
 //! [`twine_core::Model`]).
+
+pub mod thermal;
