@@ -5,4 +5,5 @@
 pub mod constraint;
 pub mod hx;
 pub mod thermo;
+pub mod turbomachinery;
 pub mod units;
