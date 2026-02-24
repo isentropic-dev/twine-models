@@ -4,5 +4,6 @@
 
 pub mod constraint;
 pub mod hx;
+pub mod schedule;
 pub mod thermo;
 pub mod units;
