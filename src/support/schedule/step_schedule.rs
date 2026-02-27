@@ -10,6 +10,10 @@ pub use step::{EmptyRangeError, Step};
 ///
 /// For schedules with fewer than this many steps, a linear scan is used.
 /// Otherwise, binary search is performed for faster lookups in larger schedules.
+///
+/// 32 is chosen heuristically: sequential memory access is cache-friendly, and
+/// binary search pays branch prediction costs that outweigh its algorithmic
+/// advantage at small sizes.
 const LINEAR_SEARCH_THRESHOLD: usize = 32;
 
 /// Associates values with distinct, non-overlapping time ranges.
@@ -93,6 +97,11 @@ impl<T: Debug + Clone + Ord, V> StepSchedule<T, V> {
     pub fn try_push(&mut self, step: Step<T, V>) -> Result<(), OverlappingStepsError<T>> {
         let index = self.steps.partition_point(|s| s.start() < step.start());
 
+        // Only the immediate neighbors need to be checked.
+        // The schedule invariant guarantees existing steps are non-overlapping, so
+        // any step two positions left ends before the left neighbor starts — if the
+        // left neighbor doesn't overlap, nothing further left can either.
+        // The same reasoning applies going right.
         let overlaps_left = index.checked_sub(1).and_then(|i| {
             let left = &self.steps[i];
             left.overlaps(&step).then_some(left)
