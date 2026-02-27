@@ -8,16 +8,15 @@
 //! 3. maps to an actual enthalpy rise using `η = Δh_s / Δh` ⇒ `Δh = Δh_s / η`,
 //! 4. requests an outlet state from `(p_out, h_out)` and reports the required work.
 
-use uom::si::f64::{Pressure, Ratio};
+use uom::si::f64::Pressure;
 
 use crate::support::{
-    constraint::{Constrained, UnitIntervalLowerOpen},
     thermo::{
         State,
         capability::{HasEnthalpy, HasEntropy, HasPressure, StateFrom, ThermoModel},
     },
     turbomachinery::{
-        CompressionWork, InletProperties,
+        CompressionWork, InletProperties, IsentropicEfficiency,
         compressor::{CompressionError, CompressionResult},
     },
     units::{SpecificEnthalpy, SpecificEntropy},
@@ -25,7 +24,7 @@ use crate::support::{
 
 /// Computes the compressor outlet state and required work using an isentropic efficiency model.
 ///
-/// `eta` is an isentropic efficiency constrained to `(0, 1]`.
+/// `eta` is an isentropic efficiency in `(0, 1]`.
 /// Values near zero represent extremely inefficient compression and result in
 /// very large work.
 ///
@@ -41,7 +40,7 @@ use crate::support::{
 pub fn isentropic<Fluid, Model>(
     inlet: &State<Fluid>,
     p_out: Pressure,
-    eta: Constrained<Ratio, UnitIntervalLowerOpen>,
+    eta: IsentropicEfficiency,
     thermo: &Model,
 ) -> Result<CompressionResult<Fluid>, CompressionError<Fluid>>
 where
@@ -82,10 +81,10 @@ where
 /// Returns [`CompressionError`] if the thermodynamic model fails, `p_out < p_in`,
 /// or the resulting work is non-physical.
 #[allow(clippy::needless_pass_by_value)]
-pub(crate) fn isentropic_core<Fluid, Model>(
+fn isentropic_core<Fluid, Model>(
     inlet_props: InletProperties<'_, Fluid, Model>,
     p_out: Pressure,
-    eta: Constrained<Ratio, UnitIntervalLowerOpen>,
+    eta: IsentropicEfficiency,
 ) -> Result<CompressionResult<Fluid>, CompressionError<Fluid>>
 where
     Model: ThermoModel<Fluid = Fluid>
@@ -116,7 +115,7 @@ where
     let State { fluid, .. } = isentropic_outlet;
 
     let dh_s = h_out_s - h_in;
-    let dh_actual = dh_s / eta.into_inner();
+    let dh_actual = dh_s / eta.ratio();
     let h_out_target = h_in + dh_actual;
 
     let outlet = thermo
@@ -143,18 +142,19 @@ mod tests {
 
     use approx::assert_relative_eq;
     use uom::si::{
-        f64::{MassDensity, Pressure, Ratio, ThermodynamicTemperature},
+        f64::{MassDensity, Pressure, ThermodynamicTemperature},
         mass_density::kilogram_per_cubic_meter,
         pressure::{kilopascal, pascal},
-        ratio::ratio,
         specific_heat_capacity::joule_per_kilogram_kelvin,
         thermodynamic_temperature::kelvin,
     };
 
     use crate::support::{
-        constraint::UnitIntervalLowerOpen,
         thermo::{PropertyError, capability::HasPressure},
-        turbomachinery::test_utils::{FakeMode, FakeThermo, MockGas, enth_si, mock_gas_model},
+        turbomachinery::{
+            IsentropicEfficiency,
+            test_utils::{FakeMode, FakeThermo, MockGas, enth_si, mock_gas_model},
+        },
         units::SpecificEntropy,
     };
 
@@ -168,7 +168,7 @@ mod tests {
 
         // Pick `p2/p1 = 2^7` so that `T2s = T1*(p2/p1)^((k-1)/k) = T1*(2^7)^(2/7) = 4*T1`.
         let p_out = Pressure::new::<kilopascal>(12_800.0);
-        let eta = UnitIntervalLowerOpen::new(Ratio::new::<ratio>(0.9)).unwrap();
+        let eta = IsentropicEfficiency::new(0.9).unwrap();
 
         let result = isentropic(&inlet, p_out, eta, &thermo).unwrap();
 
@@ -198,7 +198,13 @@ mod tests {
         let p_in = thermo.pressure(&inlet).unwrap();
         let p_out = p_in - Pressure::new::<pascal>(1.0);
 
-        let err = isentropic(&inlet, p_out, UnitIntervalLowerOpen::one(), &thermo).unwrap_err();
+        let err = isentropic(
+            &inlet,
+            p_out,
+            IsentropicEfficiency::new(1.0).unwrap(),
+            &thermo,
+        )
+        .unwrap_err();
 
         match err {
             CompressionError::OutletPressureLessThanInlet {
@@ -218,13 +224,13 @@ mod tests {
         SpecificEnthalpy,
         SpecificEntropy,
         Pressure,
-        Constrained<Ratio, UnitIntervalLowerOpen>,
+        IsentropicEfficiency,
     ) {
         let p_in = Pressure::new::<kilopascal>(100.0);
         let h_in = enth_si(0.0);
         let s_in = SpecificEntropy::new::<joule_per_kilogram_kelvin>(0.0);
         let p_out = Pressure::new::<kilopascal>(200.0);
-        let eta = UnitIntervalLowerOpen::one();
+        let eta = IsentropicEfficiency::new(1.0).unwrap();
         (p_in, h_in, s_in, p_out, eta)
     }
 

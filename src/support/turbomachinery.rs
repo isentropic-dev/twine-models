@@ -8,9 +8,11 @@
 pub mod compressor;
 pub mod turbine;
 
+mod efficiency;
 mod inlet_properties;
 mod work;
 
+pub use efficiency::{InvalidIsentropicEfficiency, IsentropicEfficiency};
 pub(crate) use inlet_properties::InletProperties;
 pub use work::{CompressionWork, ExpansionWork};
 
