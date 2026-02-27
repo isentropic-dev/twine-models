@@ -3,6 +3,6 @@
 //! This module provides setpoint-based thermostat logic with hysteresis
 //! (deadband) to prevent rapid cycling between on/off states.
 
-mod setpoint;
+pub mod setpoint;
 
-pub use setpoint::{SetpointThermostat, SetpointThermostatInput};
+pub use setpoint::{Deadband, InvalidDeadband, SetpointThermostatInput, cooling, heating};

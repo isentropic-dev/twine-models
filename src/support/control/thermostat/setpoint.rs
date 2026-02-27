@@ -1,34 +1,61 @@
 //! Setpoint thermostat with deadband hysteresis.
 
-use uom::si::f64::{TemperatureInterval, ThermodynamicTemperature};
+use std::cmp::Ordering;
+
+use thiserror::Error;
+use uom::si::{
+    f64::{TemperatureInterval, ThermodynamicTemperature},
+    temperature_interval,
+};
 
 use crate::support::control::SwitchState;
 
-/// A thermostat controller that regulates temperature relative to a setpoint.
+/// A non-negative temperature interval used as a thermostat deadband.
 ///
-/// Provides heating and cooling control logic using hysteresis (deadband) to
-/// prevent rapid cycling between on/off states.
-/// The controller does not store any mode internally; behavior is selected by
-/// calling [`SetpointThermostat::heating`] or [`SetpointThermostat::cooling`].
+/// Validated at construction — the type carries the guarantee that the
+/// deadband is non-negative, so callers don't need to check on every use.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Deadband(TemperatureInterval);
+
+/// Error returned when constructing a [`Deadband`] with a negative value.
+#[derive(Debug, Error)]
+#[error("deadband must be non-negative, got {value:?}")]
+pub struct InvalidDeadband {
+    pub value: TemperatureInterval,
+}
+
+impl Deadband {
+    /// Constructs a `Deadband` if `value` is non-negative.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InvalidDeadband`] if `value` is negative or NaN.
+    pub fn new(value: TemperatureInterval) -> Result<Self, InvalidDeadband> {
+        let zero = TemperatureInterval::new::<temperature_interval::kelvin>(0.0);
+        match value.partial_cmp(&zero) {
+            Some(Ordering::Greater | Ordering::Equal) => Ok(Self(value)),
+            Some(Ordering::Less) | None => Err(InvalidDeadband { value }),
+        }
+    }
+
+    /// Returns the underlying temperature interval.
+    #[must_use]
+    pub fn value(self) -> TemperatureInterval {
+        self.0
+    }
+}
+
+/// Controls heating to maintain temperature above a setpoint.
 ///
-/// # Heating Mode
-///
-/// In heating mode, the thermostat:
-/// - Turns **on** when the temperature falls to `setpoint - deadband` or below.
-/// - Turns **off** when the temperature reaches the setpoint or higher.
-///
-/// # Cooling Mode
-///
-/// In cooling mode, the thermostat:
-/// - Turns **on** when the temperature rises to `setpoint + deadband` or above.
-/// - Turns **off** when the temperature reaches the setpoint or lower.
+/// Turns the heating system on when temperature drops to `setpoint - deadband`
+/// or below, and off when temperature reaches the setpoint or higher.
 ///
 /// # Examples
 ///
 /// ```
 /// use twine_models::support::control::{
 ///     SwitchState,
-///     thermostat::{SetpointThermostat, SetpointThermostatInput},
+///     thermostat::setpoint::{Deadband, SetpointThermostatInput, heating},
 /// };
 /// use uom::si::{
 ///     f64::{TemperatureInterval, ThermodynamicTemperature},
@@ -40,85 +67,95 @@ use crate::support::control::SwitchState;
 ///     state: SwitchState::Off,
 ///     temperature: ThermodynamicTemperature::new::<degree_celsius>(18.0),
 ///     setpoint: ThermodynamicTemperature::new::<degree_celsius>(20.0),
-///     deadband: TemperatureInterval::new::<delta_celsius>(1.0),
+///     deadband: Deadband::new(TemperatureInterval::new::<delta_celsius>(1.0)).unwrap(),
 /// };
 ///
-/// // Heating: turns on at or below 19°C
-/// let output = SetpointThermostat::heating(input);
-/// assert_eq!(output, SwitchState::On);
-///
-/// // Cooling: remains off below 21°C
-/// let output = SetpointThermostat::cooling(input);
-/// assert_eq!(output, SwitchState::Off);
+/// // Temperature is at 18°C, which is at or below 19°C (setpoint - deadband).
+/// assert_eq!(heating(input), SwitchState::On);
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SetpointThermostat;
+#[must_use]
+pub fn heating(input: SetpointThermostatInput) -> SwitchState {
+    let SetpointThermostatInput {
+        state,
+        temperature,
+        setpoint,
+        deadband,
+    } = input;
 
-impl SetpointThermostat {
-    /// Controls heating to maintain temperature above a setpoint.
-    ///
-    /// Turns the heating system on when temperature drops below `setpoint - deadband`
-    /// and off when temperature reaches the setpoint.
-    #[must_use]
-    pub fn heating(input: SetpointThermostatInput) -> SwitchState {
-        let SetpointThermostatInput {
-            state,
-            temperature,
-            setpoint,
-            deadband,
-        } = input;
-
-        match state {
-            SwitchState::Off => {
-                if temperature <= setpoint - deadband {
-                    SwitchState::On
-                } else {
-                    SwitchState::Off
-                }
-            }
-            SwitchState::On => {
-                if temperature >= setpoint {
-                    SwitchState::Off
-                } else {
-                    SwitchState::On
-                }
+    match state {
+        SwitchState::Off => {
+            if temperature <= setpoint - deadband.value() {
+                SwitchState::On
+            } else {
+                SwitchState::Off
             }
         }
-    }
-
-    /// Controls cooling to maintain temperature below a setpoint.
-    ///
-    /// Turns the cooling system on when temperature rises above `setpoint + deadband`
-    /// and off when temperature reaches the setpoint.
-    #[must_use]
-    pub fn cooling(input: SetpointThermostatInput) -> SwitchState {
-        let SetpointThermostatInput {
-            state,
-            temperature,
-            setpoint,
-            deadband,
-        } = input;
-
-        match state {
-            SwitchState::Off => {
-                if temperature >= setpoint + deadband {
-                    SwitchState::On
-                } else {
-                    SwitchState::Off
-                }
-            }
-            SwitchState::On => {
-                if temperature <= setpoint {
-                    SwitchState::Off
-                } else {
-                    SwitchState::On
-                }
+        SwitchState::On => {
+            if temperature >= setpoint {
+                SwitchState::Off
+            } else {
+                SwitchState::On
             }
         }
     }
 }
 
-/// Input to the [`SetpointThermostat`] controller.
+/// Controls cooling to maintain temperature below a setpoint.
+///
+/// Turns the cooling system on when temperature rises to `setpoint + deadband`
+/// or above, and off when temperature reaches the setpoint or lower.
+///
+/// # Examples
+///
+/// ```
+/// use twine_models::support::control::{
+///     SwitchState,
+///     thermostat::setpoint::{Deadband, SetpointThermostatInput, cooling},
+/// };
+/// use uom::si::{
+///     f64::{TemperatureInterval, ThermodynamicTemperature},
+///     temperature_interval::degree_celsius as delta_celsius,
+///     thermodynamic_temperature::degree_celsius,
+/// };
+///
+/// let input = SetpointThermostatInput {
+///     state: SwitchState::Off,
+///     temperature: ThermodynamicTemperature::new::<degree_celsius>(18.0),
+///     setpoint: ThermodynamicTemperature::new::<degree_celsius>(20.0),
+///     deadband: Deadband::new(TemperatureInterval::new::<delta_celsius>(1.0)).unwrap(),
+/// };
+///
+/// // Temperature is at 18°C, which is below 21°C (setpoint + deadband).
+/// assert_eq!(cooling(input), SwitchState::Off);
+/// ```
+#[must_use]
+pub fn cooling(input: SetpointThermostatInput) -> SwitchState {
+    let SetpointThermostatInput {
+        state,
+        temperature,
+        setpoint,
+        deadband,
+    } = input;
+
+    match state {
+        SwitchState::Off => {
+            if temperature >= setpoint + deadband.value() {
+                SwitchState::On
+            } else {
+                SwitchState::Off
+            }
+        }
+        SwitchState::On => {
+            if temperature <= setpoint {
+                SwitchState::Off
+            } else {
+                SwitchState::On
+            }
+        }
+    }
+}
+
+/// Input to the [`heating`] and [`cooling`] thermostat functions.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SetpointThermostatInput {
     /// The current on/off state of the controlled system (e.g., heater or cooler).
@@ -131,7 +168,7 @@ pub struct SetpointThermostatInput {
     pub setpoint: ThermodynamicTemperature,
 
     /// The deadband around the setpoint to avoid rapid cycling.
-    pub deadband: TemperatureInterval,
+    pub deadband: Deadband,
 }
 
 impl SetpointThermostatInput {
@@ -158,7 +195,7 @@ impl SetpointThermostatInput {
 
     /// Returns `self` with the given deadband, keeping other fields unchanged.
     #[must_use]
-    pub fn with_deadband(self, deadband: TemperatureInterval) -> Self {
+    pub fn with_deadband(self, deadband: Deadband) -> Self {
         Self { deadband, ..self }
     }
 }
@@ -183,7 +220,35 @@ mod tests {
             state,
             temperature: ThermodynamicTemperature::new::<degree_celsius>(temperature),
             setpoint: ThermodynamicTemperature::new::<degree_celsius>(SETPOINT),
-            deadband: TemperatureInterval::new::<delta_celsius>(DEADBAND),
+            deadband: Deadband::new(TemperatureInterval::new::<delta_celsius>(DEADBAND)).unwrap(),
+        }
+    }
+
+    mod deadband {
+        use super::*;
+
+        #[test]
+        fn rejects_negative() {
+            let negative = TemperatureInterval::new::<delta_celsius>(-1.0);
+            assert!(Deadband::new(negative).is_err());
+        }
+
+        #[test]
+        fn rejects_nan() {
+            let nan = TemperatureInterval::new::<delta_celsius>(f64::NAN);
+            assert!(Deadband::new(nan).is_err());
+        }
+
+        #[test]
+        fn accepts_zero() {
+            let zero = TemperatureInterval::new::<delta_celsius>(0.0);
+            assert!(Deadband::new(zero).is_ok());
+        }
+
+        #[test]
+        fn accepts_positive() {
+            let positive = TemperatureInterval::new::<delta_celsius>(2.0);
+            assert!(Deadband::new(positive).is_ok());
         }
     }
 
@@ -195,30 +260,25 @@ mod tests {
             let on_threshold = SETPOINT - DEADBAND;
 
             let input = test_input(SwitchState::Off, on_threshold);
-            let output = SetpointThermostat::heating(input);
-            assert_eq!(output, SwitchState::On);
+            assert_eq!(super::super::heating(input), SwitchState::On);
 
             let input = test_input(SwitchState::Off, on_threshold - 0.1);
-            let output = SetpointThermostat::heating(input);
-            assert_eq!(output, SwitchState::On);
+            assert_eq!(super::super::heating(input), SwitchState::On);
         }
 
         #[test]
         fn stays_on_below_setpoint() {
             let input = test_input(SwitchState::On, SETPOINT - 0.1);
-            let output = SetpointThermostat::heating(input);
-            assert_eq!(output, SwitchState::On);
+            assert_eq!(super::super::heating(input), SwitchState::On);
         }
 
         #[test]
         fn turns_off_at_or_above_setpoint() {
             let input = test_input(SwitchState::On, SETPOINT);
-            let output = SetpointThermostat::heating(input);
-            assert_eq!(output, SwitchState::Off);
+            assert_eq!(super::super::heating(input), SwitchState::Off);
 
             let input = test_input(SwitchState::On, SETPOINT + 0.1);
-            let output = SetpointThermostat::heating(input);
-            assert_eq!(output, SwitchState::Off);
+            assert_eq!(super::super::heating(input), SwitchState::Off);
         }
 
         #[test]
@@ -227,8 +287,7 @@ mod tests {
             let midpoint = f64::midpoint(SETPOINT, on_threshold);
 
             let input = test_input(SwitchState::Off, midpoint);
-            let output = SetpointThermostat::heating(input);
-            assert_eq!(output, SwitchState::Off);
+            assert_eq!(super::super::heating(input), SwitchState::Off);
         }
     }
 
@@ -240,30 +299,25 @@ mod tests {
             let on_threshold = SETPOINT + DEADBAND;
 
             let input = test_input(SwitchState::Off, on_threshold);
-            let output = SetpointThermostat::cooling(input);
-            assert_eq!(output, SwitchState::On);
+            assert_eq!(super::super::cooling(input), SwitchState::On);
 
             let input = test_input(SwitchState::Off, on_threshold + 0.1);
-            let output = SetpointThermostat::cooling(input);
-            assert_eq!(output, SwitchState::On);
+            assert_eq!(super::super::cooling(input), SwitchState::On);
         }
 
         #[test]
         fn stays_on_above_setpoint() {
             let input = test_input(SwitchState::On, SETPOINT + 0.1);
-            let output = SetpointThermostat::cooling(input);
-            assert_eq!(output, SwitchState::On);
+            assert_eq!(super::super::cooling(input), SwitchState::On);
         }
 
         #[test]
         fn turns_off_at_or_below_setpoint() {
             let input = test_input(SwitchState::On, SETPOINT);
-            let output = SetpointThermostat::cooling(input);
-            assert_eq!(output, SwitchState::Off);
+            assert_eq!(super::super::cooling(input), SwitchState::Off);
 
             let input = test_input(SwitchState::On, SETPOINT - 0.1);
-            let output = SetpointThermostat::cooling(input);
-            assert_eq!(output, SwitchState::Off);
+            assert_eq!(super::super::cooling(input), SwitchState::Off);
         }
 
         #[test]
@@ -272,8 +326,7 @@ mod tests {
             let midpoint = f64::midpoint(SETPOINT, on_threshold);
 
             let input = test_input(SwitchState::Off, midpoint);
-            let output = SetpointThermostat::cooling(input);
-            assert_eq!(output, SwitchState::Off);
+            assert_eq!(super::super::cooling(input), SwitchState::Off);
         }
     }
 }
