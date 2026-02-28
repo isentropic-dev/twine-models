@@ -189,8 +189,8 @@ mod tests {
     use uom::si::{
         f64::{MassDensity, TemperatureInterval, ThermodynamicTemperature, Time},
         mass_density::kilogram_per_cubic_meter,
-        thermodynamic_temperature::kelvin,
         temperature_interval::kelvin as interval_kelvin,
+        thermodynamic_temperature::kelvin,
         time::second,
     };
 
