@@ -117,6 +117,8 @@ where
     pub fluid: <Fluid as StepIntegrable<Time>>::Derivative,
 }
 
+// Manual trait impls because derive adds bounds on `Fluid` itself,
+// but the field type is `Fluid::Derivative` — the bounds belong there.
 impl<Fluid> std::fmt::Debug for StateDerivative<Fluid>
 where
     Fluid: StepIntegrable<Time>,
