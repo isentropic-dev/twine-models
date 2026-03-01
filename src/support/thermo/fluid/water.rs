@@ -25,7 +25,7 @@ impl IncompressibleFluid for Water {
 impl StepIntegrable<Time> for Water {
     type Derivative = ();
 
-    fn step(&self, _: (), _: Time) -> Self {
+    fn step(&self, (): (), _: Time) -> Self {
         *self
     }
 }

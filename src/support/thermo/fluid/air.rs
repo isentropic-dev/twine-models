@@ -23,7 +23,7 @@ impl PerfectGasFluid for Air {
 impl StepIntegrable<Time> for Air {
     type Derivative = ();
 
-    fn step(&self, _: (), _: Time) -> Self {
+    fn step(&self, (): (), _: Time) -> Self {
         *self
     }
 }
