@@ -72,13 +72,14 @@ impl<Fluid> State<Fluid> {
     }
 }
 
-/// The time derivative of a thermodynamic [`State<Fluid>`].
+/// The time derivative of a thermodynamic [`State`].
 ///
-/// Used with [`StepIntegrable`] to advance a `State<Fluid>` through time.
-/// Temperature and density evolve linearly with their respective rates;
-/// the fluid field advances via its own [`StepIntegrable`] implementation.
+/// Parameterized over the fluid derivative type directly, keeping the struct
+/// independent of the [`StepIntegrable`] trait.
+/// The connection to `StepIntegrable` happens at the impl site on `State<Fluid>`,
+/// where `StateDerivative<Fluid::Derivative>` becomes the associated type.
 ///
-/// Construct this using the rate fields directly:
+/// # Example
 ///
 /// ```
 /// use twine_models::support::thermo::{State, StateDerivative, fluid::Air};
@@ -97,16 +98,14 @@ impl<Fluid> State<Fluid> {
 /// };
 ///
 /// let dt = Time::new::<second>(1.0);
-/// let deriv = StateDerivative::<Air> {
+/// let deriv: StateDerivative<()> = StateDerivative {
 ///     temperature: TemperatureInterval::new::<interval_kelvin>(1.0) / dt,
 ///     density: MassDensity::new::<kilogram_per_cubic_meter>(0.1) / dt,
 ///     fluid: (),
 /// };
 /// ```
-pub struct StateDerivative<Fluid>
-where
-    Fluid: StepIntegrable<Time>,
-{
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct StateDerivative<FluidDerivative> {
     /// Rate of change of temperature (K/s).
     pub temperature: <TemperatureInterval as Div<Time>>::Output,
 
@@ -114,63 +113,14 @@ where
     pub density: <MassDensity as Div<Time>>::Output,
 
     /// Fluid-specific derivative.
-    pub fluid: <Fluid as StepIntegrable<Time>>::Derivative,
-}
-
-// Manual trait impls because derive adds bounds on `Fluid` itself,
-// but the field type is `Fluid::Derivative` — the bounds belong there.
-impl<Fluid> std::fmt::Debug for StateDerivative<Fluid>
-where
-    Fluid: StepIntegrable<Time>,
-    <Fluid as StepIntegrable<Time>>::Derivative: std::fmt::Debug,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StateDerivative")
-            .field("temperature", &self.temperature)
-            .field("density", &self.density)
-            .field("fluid", &self.fluid)
-            .finish()
-    }
-}
-
-impl<Fluid> Clone for StateDerivative<Fluid>
-where
-    Fluid: StepIntegrable<Time>,
-    <Fluid as StepIntegrable<Time>>::Derivative: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            temperature: self.temperature,
-            density: self.density,
-            fluid: self.fluid.clone(),
-        }
-    }
-}
-
-impl<Fluid> Copy for StateDerivative<Fluid>
-where
-    Fluid: StepIntegrable<Time>,
-    <Fluid as StepIntegrable<Time>>::Derivative: Copy,
-{
-}
-
-impl<Fluid> PartialEq for StateDerivative<Fluid>
-where
-    Fluid: StepIntegrable<Time>,
-    <Fluid as StepIntegrable<Time>>::Derivative: PartialEq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.temperature == other.temperature
-            && self.density == other.density
-            && self.fluid == other.fluid
-    }
+    pub fluid: FluidDerivative,
 }
 
 impl<Fluid> StepIntegrable<Time> for State<Fluid>
 where
     Fluid: StepIntegrable<Time>,
 {
-    type Derivative = StateDerivative<Fluid>;
+    type Derivative = StateDerivative<Fluid::Derivative>;
 
     fn step(&self, derivative: Self::Derivative, delta: Time) -> Self {
         Self {
