@@ -10,7 +10,7 @@
 //! Run with:
 //!
 //! ```sh
-//! cargo run --example stratified_tank --features plot --release
+//! cargo run --example stratified_tank --release
 //! ```
 
 use std::{convert::Infallible, error::Error};
