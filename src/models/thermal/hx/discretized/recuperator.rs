@@ -334,14 +334,9 @@ mod tests {
 
     use approx::assert_relative_eq;
     use twine_core::Model;
-    use uom::{
-        ConstZero,
-        si::{
-            f64::MassRate,
-            mass_rate::kilogram_per_second,
-            thermal_conductance::watt_per_kelvin,
-            thermodynamic_temperature::kelvin,
-        },
+    use uom::si::{
+        f64::MassRate, mass_rate::kilogram_per_second, thermal_conductance::watt_per_kelvin,
+        thermodynamic_temperature::kelvin,
     };
 
     use crate::models::thermal::hx::discretized::core::{
@@ -405,33 +400,25 @@ mod tests {
         let recuperator = Recuperator::new(thermo(), 10, RecuperatorConfig::default()).unwrap();
         let out = recuperator.call(&inp).unwrap();
 
-        assert!(out.top_outlet.temperature > cold_inlet_temp, "cold side should be heated");
-        assert!(out.bottom_outlet.temperature < hot_inlet_temp, "hot side should be cooled");
+        assert!(
+            out.top_outlet.temperature > cold_inlet_temp,
+            "cold side should be heated"
+        );
+        assert!(
+            out.bottom_outlet.temperature < hot_inlet_temp,
+            "hot side should be cooled"
+        );
     }
 
     #[test]
     fn zero_ua_returns_inlets_unchanged() {
-        let inp = RecuperatorInput {
-            inlets: Inlets {
-                top: state(400.0),
-                bottom: state(600.0),
-            },
-            mass_flows: mass_flows(),
-            pressure_drops: PressureDrops::default(),
-            ua: ThermalConductance::ZERO,
-        };
+        let inp = input(400.0, 600.0, 0.0);
 
         let recuperator = Recuperator::new(thermo(), 10, RecuperatorConfig::default()).unwrap();
         let out = recuperator.call(&inp).unwrap();
 
-        assert_relative_eq!(
-            out.top_outlet.temperature.get::<kelvin>(),
-            400.0,
-        );
-        assert_relative_eq!(
-            out.bottom_outlet.temperature.get::<kelvin>(),
-            600.0,
-        );
+        assert_relative_eq!(out.top_outlet.temperature.get::<kelvin>(), 400.0);
+        assert_relative_eq!(out.bottom_outlet.temperature.get::<kelvin>(), 600.0);
     }
 
     #[test]
