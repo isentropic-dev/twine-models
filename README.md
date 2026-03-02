@@ -27,12 +27,11 @@ See the [crate docs](https://docs.rs/twine-models) for details on each module.
 
 ## Feature flags
 
-| Feature    | What it enables                                      | Default |
-|------------|------------------------------------------------------|---------|
-| `coolprop` | `support::thermo::model::CoolProp` (via `rfluids`)   | no      |
-| `plot`     | `PlotObserver` integration via `twine-observers`     | no      |
+| Feature    | What it enables                                    | Default |
+|------------|----------------------------------------------------|---------|
+| `coolprop` | `support::thermo::model::CoolProp` (via `rfluids`) | no      |
 
-Enable a feature in your `Cargo.toml`:
+Opt in via `Cargo.toml`:
 
 ```toml
 twine-models = { version = "0.1", features = ["coolprop"] }
@@ -45,7 +44,7 @@ twine-models = { version = "0.1", features = ["coolprop"] }
 Simulates five days of residential hot water tank operation with a thermostat-controlled heating element, a daily draw schedule, and an interactive time-series plot.
 
 ```sh
-cargo run --example stratified_tank --features plot --release
+cargo run --example stratified_tank --release
 ```
 
 ## Utility code (`support`)
