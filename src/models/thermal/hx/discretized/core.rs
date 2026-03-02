@@ -17,7 +17,7 @@ mod solve;
 mod traits;
 
 #[cfg(test)]
-mod test_support;
+pub(crate) mod test_support;
 
 pub use given_ua::{GivenUaConfig, GivenUaError, GivenUaResults};
 pub use heat_transfer_rate::HeatTransferRate;
