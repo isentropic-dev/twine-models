@@ -415,7 +415,9 @@ mod tests {
 
         let state = co2_state();
         let pressure = model.pressure(&state).unwrap();
-        let roundtrip = model.state_from((CarbonDioxide, state.temperature, pressure)).unwrap();
+        let roundtrip = model
+            .state_from((CarbonDioxide, state.temperature, pressure))
+            .unwrap();
 
         assert_relative_eq!(
             roundtrip.density.get::<kilogram_per_cubic_meter>(),
