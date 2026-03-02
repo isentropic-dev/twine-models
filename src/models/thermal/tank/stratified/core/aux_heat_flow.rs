@@ -1,0 +1,185 @@
+use uom::{ConstZero, si::f64::Power};
+
+use super::StratifiedTankError;
+
+/// Auxiliary heat flow for a tank heat source or sink.
+///
+/// Distinguishes heating from cooling by name rather than sign, avoiding
+/// the ambiguity of a raw signed power value.
+/// Both `Heating` and `Cooling` store a strictly positive magnitude;
+/// direction is encoded by the variant.
+///
+/// Use [`AuxHeatFlow::heating`] or [`AuxHeatFlow::cooling`] to construct.
+/// Direct variant construction is not possible because the power field is
+/// private, ensuring all values pass validation.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum AuxHeatFlow {
+    /// Heat added to the fluid (e.g., an electric heating element).
+    ///
+    /// The stored power is the rate at which energy enters the fluid.
+    /// Guaranteed strictly positive and finite.
+    Heating(#[doc(hidden)] ValidatedPower),
+
+    /// Heat removed from the fluid (e.g., a cooling coil).
+    ///
+    /// The stored power is the rate at which energy leaves the fluid.
+    /// Guaranteed strictly positive and finite.
+    Cooling(#[doc(hidden)] ValidatedPower),
+
+    /// No auxiliary heat flow.
+    None,
+}
+
+/// A strictly positive, finite power value.
+///
+/// This is an opaque wrapper — construct via [`AuxHeatFlow::heating`] or
+/// [`AuxHeatFlow::cooling`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ValidatedPower(Power);
+
+impl AuxHeatFlow {
+    /// Creates a `Heating` variant.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StratifiedTankError::NonPositiveAuxPower`] if `power` is not
+    /// strictly positive and finite (i.e. zero, negative, infinite, or NaN).
+    pub fn heating(power: Power) -> Result<Self, StratifiedTankError> {
+        let validated = validate_power(power)?;
+        Ok(Self::Heating(validated))
+    }
+
+    /// Creates a `Cooling` variant.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StratifiedTankError::NonPositiveAuxPower`] if `power` is not
+    /// strictly positive and finite (i.e. zero, negative, infinite, or NaN).
+    pub fn cooling(power: Power) -> Result<Self, StratifiedTankError> {
+        let validated = validate_power(power)?;
+        Ok(Self::Cooling(validated))
+    }
+
+    /// Returns the signed power: positive for heating, negative for cooling, zero for none.
+    pub(super) fn signed(self) -> Power {
+        match self {
+            Self::Heating(p) => p.0,
+            Self::Cooling(p) => -p.0,
+            Self::None => Power::ZERO,
+        }
+    }
+}
+
+/// Validates that `power` is strictly positive and finite.
+///
+/// Uses the raw SI f64 so NaN and infinity are caught by `!is_finite()`.
+/// A negated partial-order comparison (`<=`) would silently pass NaN because
+/// NaN comparisons always return false.
+fn validate_power(power: Power) -> Result<ValidatedPower, StratifiedTankError> {
+    if power.value <= 0.0 || !power.value.is_finite() {
+        return Err(StratifiedTankError::NonPositiveAuxPower(power));
+    }
+    Ok(ValidatedPower(power))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use uom::si::power::watt;
+
+    fn w(v: f64) -> Power {
+        Power::new::<watt>(v)
+    }
+
+    #[test]
+    fn heating_positive_ok() {
+        assert!(AuxHeatFlow::heating(w(1.0)).is_ok());
+    }
+
+    #[test]
+    fn cooling_positive_ok() {
+        assert!(AuxHeatFlow::cooling(w(1.0)).is_ok());
+    }
+
+    #[test]
+    fn heating_zero_errors() {
+        assert!(matches!(
+            AuxHeatFlow::heating(Power::ZERO),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
+    fn heating_negative_errors() {
+        assert!(matches!(
+            AuxHeatFlow::heating(w(-1.0)),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
+    fn heating_nan_errors() {
+        assert!(matches!(
+            AuxHeatFlow::heating(Power::new::<watt>(f64::NAN)),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
+    fn heating_infinity_errors() {
+        assert!(matches!(
+            AuxHeatFlow::heating(Power::new::<watt>(f64::INFINITY)),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
+    fn cooling_zero_errors() {
+        assert!(matches!(
+            AuxHeatFlow::cooling(Power::ZERO),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
+    fn cooling_negative_errors() {
+        assert!(matches!(
+            AuxHeatFlow::cooling(w(-1.0)),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
+    fn cooling_nan_errors() {
+        assert!(matches!(
+            AuxHeatFlow::cooling(Power::new::<watt>(f64::NAN)),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
+    fn cooling_infinity_errors() {
+        assert!(matches!(
+            AuxHeatFlow::cooling(Power::new::<watt>(f64::INFINITY)),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
+    fn signed_heating_is_positive() {
+        let q = AuxHeatFlow::heating(w(5.0)).unwrap();
+        assert!(q.signed() > Power::ZERO);
+    }
+
+    #[test]
+    fn signed_cooling_is_negative() {
+        let q = AuxHeatFlow::cooling(w(5.0)).unwrap();
+        assert!(q.signed() < Power::ZERO);
+    }
+
+    #[test]
+    fn signed_none_is_zero() {
+        assert_eq!(AuxHeatFlow::None.signed(), Power::ZERO);
+    }
+}

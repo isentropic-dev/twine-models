@@ -4,3 +4,4 @@
 //! thermal storage, and related components.
 
 pub mod hx;
+pub mod tank;
