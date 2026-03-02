@@ -55,6 +55,15 @@
 //! let output = tank.evaluate(&input);
 //! assert_eq!(output.temperatures.len(), 5);
 //! ```
+//!
+//! ## Full simulation example
+//!
+//! The `stratified_tank` example demonstrates a complete transient simulation
+//! with thermostat control, a daily draw schedule, and interactive plotting:
+//!
+//! ```sh
+//! cargo run --example stratified_tank --features plot --release
+//! ```
 
 mod core;
 
