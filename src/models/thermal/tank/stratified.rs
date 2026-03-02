@@ -342,6 +342,78 @@ mod tests {
     }
 
     #[test]
+    fn at_equilibrium_all_derivatives_zero() {
+        // At uniform temperature with zero flow and matching environment,
+        // every derivative should be exactly zero.
+        let tank = test_tank();
+        let t = ThermodynamicTemperature::new::<degree_celsius>(20.0);
+
+        let input = StratifiedTankInput {
+            temperatures: [t; 3],
+            port_flows: [port_flow(0.0, 20.0)],
+            aux_heat_flows: [AuxHeatFlow::None],
+            environment: ambient(20.0),
+        };
+
+        let out = tank.evaluate(&input);
+
+        // Temperatures unchanged after buoyancy (already stable).
+        assert!(out.temperatures.iter().all(|&nt| nt == t));
+
+        // Every derivative should be zero.
+        for deriv in out.derivatives {
+            assert_relative_eq!(k_per_s(deriv), 0.0, epsilon = 1e-15);
+        }
+    }
+
+    #[test]
+    fn aux_cooling_lowers_temperature_over_time() {
+        // Symmetric counterpart to the heating test: 20 kW of cooling at the
+        // top node should drop it by 0.5 K over 100 s.
+        let tank = test_tank();
+        let t0 = ThermodynamicTemperature::new::<degree_celsius>(50.0);
+
+        let initial = StratifiedTankInput {
+            temperatures: [t0; 3],
+            port_flows: [port_flow(0.0, 50.0)],
+            aux_heat_flows: [AuxHeatFlow::Cooling(Power::new::<kilowatt>(20.0))],
+            environment: ambient(50.0),
+        };
+
+        let dt = Time::new::<second>(1.0);
+        let solution =
+            euler::solve_unobserved(&tank, &TankOdeProblem::<3, 1, 1>, initial, dt, 100).unwrap();
+
+        let final_input = &solution.history.last().unwrap().input;
+        let t_top = final_input.temperatures[2].get::<degree_celsius>();
+        let t_bot = final_input.temperatures[0].get::<degree_celsius>();
+
+        assert_relative_eq!(t_top, 49.5, epsilon = 1e-10);
+        assert_relative_eq!(t_bot, 50.0, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn instantaneous_aux_cooling_derivative_is_negative() {
+        // Verify the sign of the derivative at t=0, not just the integrated result.
+        let tank = test_tank();
+        let t = ThermodynamicTemperature::new::<degree_celsius>(50.0);
+
+        let input = StratifiedTankInput {
+            temperatures: [t; 3],
+            port_flows: [port_flow(0.0, 50.0)],
+            aux_heat_flows: [AuxHeatFlow::Cooling(Power::new::<kilowatt>(20.0))],
+            environment: ambient(50.0),
+        };
+
+        let out = tank.evaluate(&input);
+
+        // Q/C = −20 kW / (1 m³ × 1000 kg/m³ × 4 kJ/(kg·K)) = −0.005 K/s at node 2.
+        assert_relative_eq!(k_per_s(out.derivatives[0]), 0.0);
+        assert_relative_eq!(k_per_s(out.derivatives[1]), 0.0);
+        assert_relative_eq!(k_per_s(out.derivatives[2]), -0.005);
+    }
+
+    #[test]
     fn tank_with_conduction_reaches_equilibrium() {
         // High conductivity → short time constant so the simulation reaches
         // equilibrium in a reasonable number of steps.

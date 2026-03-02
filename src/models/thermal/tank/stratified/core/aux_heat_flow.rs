@@ -31,9 +31,12 @@ impl AuxHeatFlow {
     /// # Errors
     ///
     /// Returns [`StratifiedTankError::NonPositiveAuxPower`] if `power` is not
-    /// strictly positive.
+    /// strictly positive and finite (i.e. zero, negative, infinite, or NaN).
     pub fn heating(power: Power) -> Result<Self, StratifiedTankError> {
-        if power <= Power::ZERO {
+        // Use `.value` (raw SI f64) so NaN and infinity are caught by
+        // `!is_finite()`. A negated partial-order comparison (`<=`) would
+        // silently pass NaN because NaN comparisons always return false.
+        if power.value <= 0.0 || !power.value.is_finite() {
             return Err(StratifiedTankError::NonPositiveAuxPower(power));
         }
         Ok(Self::Heating(power))
@@ -44,9 +47,9 @@ impl AuxHeatFlow {
     /// # Errors
     ///
     /// Returns [`StratifiedTankError::NonPositiveAuxPower`] if `power` is not
-    /// strictly positive.
+    /// strictly positive and finite (i.e. zero, negative, infinite, or NaN).
     pub fn cooling(power: Power) -> Result<Self, StratifiedTankError> {
-        if power <= Power::ZERO {
+        if power.value <= 0.0 || !power.value.is_finite() {
             return Err(StratifiedTankError::NonPositiveAuxPower(power));
         }
         Ok(Self::Cooling(power))
@@ -99,9 +102,49 @@ mod tests {
     }
 
     #[test]
+    fn heating_nan_errors() {
+        assert!(matches!(
+            AuxHeatFlow::heating(Power::new::<watt>(f64::NAN)),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
+    fn heating_infinity_errors() {
+        assert!(matches!(
+            AuxHeatFlow::heating(Power::new::<watt>(f64::INFINITY)),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
     fn cooling_zero_errors() {
         assert!(matches!(
             AuxHeatFlow::cooling(Power::ZERO),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
+    fn cooling_negative_errors() {
+        assert!(matches!(
+            AuxHeatFlow::cooling(w(-1.0)),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
+    fn cooling_nan_errors() {
+        assert!(matches!(
+            AuxHeatFlow::cooling(Power::new::<watt>(f64::NAN)),
+            Err(StratifiedTankError::NonPositiveAuxPower(_))
+        ));
+    }
+
+    #[test]
+    fn cooling_infinity_errors() {
+        assert!(matches!(
+            AuxHeatFlow::cooling(Power::new::<watt>(f64::INFINITY)),
             Err(StratifiedTankError::NonPositiveAuxPower(_))
         ));
     }
