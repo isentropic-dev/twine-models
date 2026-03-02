@@ -18,17 +18,17 @@ use uom::si::{
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
-pub(super) struct TestFluid;
+pub(crate) struct TestFluid;
 
 #[derive(Debug, Clone, Copy)]
-pub(super) struct TestThermoModel {
+pub(crate) struct TestThermoModel {
     cp: SpecificHeatCapacity,
     pressure: Pressure,
     density: MassDensity,
 }
 
 impl TestThermoModel {
-    pub(super) fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             cp: SpecificHeatCapacity::new::<joule_per_kilogram_kelvin>(1000.0),
             pressure: Pressure::new::<pascal>(101_325.0),
@@ -37,7 +37,7 @@ impl TestThermoModel {
     }
 
     /// Constant specific heat capacity used by this test model.
-    pub(super) fn cp(&self) -> SpecificHeatCapacity {
+    pub(crate) fn cp(&self) -> SpecificHeatCapacity {
         self.cp
     }
 }
@@ -84,7 +84,7 @@ impl StateFrom<(TestFluid, Pressure, SpecificEnthalpy)> for TestThermoModel {
     }
 }
 
-pub(super) fn state(temp_kelvin: f64) -> State<TestFluid> {
+pub(crate) fn state(temp_kelvin: f64) -> State<TestFluid> {
     State::new(
         ThermodynamicTemperature::new::<kelvin>(temp_kelvin),
         MassDensity::new::<kilogram_per_cubic_meter>(1.0),

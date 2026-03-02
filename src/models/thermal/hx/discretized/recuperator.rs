@@ -327,3 +327,121 @@ impl From<GivenUaError> for RecuperatorError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use approx::assert_relative_eq;
+    use twine_core::Model;
+    use uom::{
+        ConstZero,
+        si::{
+            f64::MassRate,
+            mass_rate::kilogram_per_second,
+            thermal_conductance::watt_per_kelvin,
+            thermodynamic_temperature::kelvin,
+        },
+    };
+
+    use crate::models::thermal::hx::discretized::core::{
+        Inlets, MassFlows, PressureDrops,
+        test_support::{TestFluid, TestThermoModel, state},
+    };
+
+    fn thermo() -> TestThermoModel {
+        TestThermoModel::new()
+    }
+
+    fn mass_flows() -> MassFlows {
+        MassFlows::new_unchecked(
+            MassRate::new::<kilogram_per_second>(1.0),
+            MassRate::new::<kilogram_per_second>(1.0),
+        )
+    }
+
+    fn input(top: f64, bottom: f64, ua_wpk: f64) -> RecuperatorInput<TestFluid> {
+        RecuperatorInput {
+            inlets: Inlets {
+                top: state(top),
+                bottom: state(bottom),
+            },
+            mass_flows: mass_flows(),
+            pressure_drops: PressureDrops::default(),
+            ua: ThermalConductance::new::<watt_per_kelvin>(ua_wpk),
+        }
+    }
+
+    #[test]
+    fn new_accepts_supported_segment_counts() {
+        for n in [1, 5, 10, 20, 50] {
+            assert!(
+                Recuperator::<TestFluid, _>::new(thermo(), n, RecuperatorConfig::default()).is_ok(),
+                "segment count {n} should be accepted",
+            );
+        }
+    }
+
+    #[test]
+    fn new_rejects_unsupported_segment_counts() {
+        for n in [0, 2, 3, 100] {
+            assert!(
+                matches!(
+                    Recuperator::<TestFluid, _>::new(thermo(), n, RecuperatorConfig::default()),
+                    Err(RecuperatorError::UnsupportedSegments(_))
+                ),
+                "segment count {n} should be rejected",
+            );
+        }
+    }
+
+    #[test]
+    fn call_hot_cools_and_cold_heats() {
+        // Bottom is hot (600 K), top is cold (400 K).
+        let inp = input(400.0, 600.0, 500.0);
+        let cold_inlet_temp = inp.inlets.top.temperature;
+        let hot_inlet_temp = inp.inlets.bottom.temperature;
+
+        let recuperator = Recuperator::new(thermo(), 10, RecuperatorConfig::default()).unwrap();
+        let out = recuperator.call(&inp).unwrap();
+
+        assert!(out.top_outlet.temperature > cold_inlet_temp, "cold side should be heated");
+        assert!(out.bottom_outlet.temperature < hot_inlet_temp, "hot side should be cooled");
+    }
+
+    #[test]
+    fn zero_ua_returns_inlets_unchanged() {
+        let inp = RecuperatorInput {
+            inlets: Inlets {
+                top: state(400.0),
+                bottom: state(600.0),
+            },
+            mass_flows: mass_flows(),
+            pressure_drops: PressureDrops::default(),
+            ua: ThermalConductance::ZERO,
+        };
+
+        let recuperator = Recuperator::new(thermo(), 10, RecuperatorConfig::default()).unwrap();
+        let out = recuperator.call(&inp).unwrap();
+
+        assert_relative_eq!(
+            out.top_outlet.temperature.get::<kelvin>(),
+            400.0,
+        );
+        assert_relative_eq!(
+            out.bottom_outlet.temperature.get::<kelvin>(),
+            600.0,
+        );
+    }
+
+    #[test]
+    fn negative_ua_returns_error() {
+        let recuperator = Recuperator::new(thermo(), 10, RecuperatorConfig::default()).unwrap();
+        let result = recuperator.call(&input(400.0, 600.0, -1.0));
+
+        assert!(
+            matches!(result, Err(RecuperatorError::NegativeUa(_))),
+            "expected NegativeUa error",
+        );
+    }
+}
