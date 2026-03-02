@@ -70,7 +70,7 @@ use uom::si::{
 pub use core::{
     AuxHeatFlow, Environment, Fluid, Geometry, Insulation, Location, PortFlow, PortLocation,
     StratifiedTank, StratifiedTankError, StratifiedTankInput, StratifiedTankOutput,
-    TemperatureRate,
+    TemperatureRate, ValidatedPower,
 };
 
 impl<const N: usize, const P: usize, const Q: usize> Model for StratifiedTank<N, P, Q> {
@@ -324,7 +324,7 @@ mod tests {
         let initial = StratifiedTankInput {
             temperatures: [t0; 3],
             port_flows: [port_flow(0.0, 20.0)],
-            aux_heat_flows: [AuxHeatFlow::Heating(Power::new::<kilowatt>(20.0))],
+            aux_heat_flows: [AuxHeatFlow::heating(Power::new::<kilowatt>(20.0)).unwrap()],
             environment: ambient(20.0),
         };
 
@@ -376,7 +376,7 @@ mod tests {
         let initial = StratifiedTankInput {
             temperatures: [t0; 3],
             port_flows: [port_flow(0.0, 50.0)],
-            aux_heat_flows: [AuxHeatFlow::Cooling(Power::new::<kilowatt>(20.0))],
+            aux_heat_flows: [AuxHeatFlow::cooling(Power::new::<kilowatt>(20.0)).unwrap()],
             environment: ambient(50.0),
         };
 
@@ -401,7 +401,7 @@ mod tests {
         let input = StratifiedTankInput {
             temperatures: [t; 3],
             port_flows: [port_flow(0.0, 50.0)],
-            aux_heat_flows: [AuxHeatFlow::Cooling(Power::new::<kilowatt>(20.0))],
+            aux_heat_flows: [AuxHeatFlow::cooling(Power::new::<kilowatt>(20.0)).unwrap()],
             environment: ambient(50.0),
         };
 

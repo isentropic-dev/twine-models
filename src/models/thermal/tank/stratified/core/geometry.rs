@@ -43,7 +43,7 @@ impl Geometry {
     /// # Errors
     ///
     /// Returns an error string describing the first invalid parameter found.
-    /// Callers wrap these into [`super::super::StratifiedTankError::InvalidGeometry`].
+    /// Callers wrap these into [`super::super::StratifiedTankError::Geometry`].
     #[allow(clippy::unnecessary_wraps)]
     pub(super) fn into_node_geometries<const N: usize>(self) -> Result<[NodeGeometry; N], String> {
         if N == 0 {

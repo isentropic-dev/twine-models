@@ -24,7 +24,7 @@ use uom::{
 use geometry::NodeGeometry;
 use node::{Adjacent, Node};
 
-pub use aux_heat_flow::AuxHeatFlow;
+pub use aux_heat_flow::{AuxHeatFlow, ValidatedPower};
 pub use environment::Environment;
 pub use fluid::Fluid;
 pub use geometry::Geometry;
@@ -500,7 +500,7 @@ mod tests {
         let input = StratifiedTankInput {
             temperatures: [t; 3],
             port_flows: zero_port_flows(),
-            aux_heat_flows: [AuxHeatFlow::Heating(Power::new::<kilowatt>(20.0))],
+            aux_heat_flows: [AuxHeatFlow::heating(Power::new::<kilowatt>(20.0)).unwrap()],
             environment: Environment {
                 bottom: t,
                 side: t,
