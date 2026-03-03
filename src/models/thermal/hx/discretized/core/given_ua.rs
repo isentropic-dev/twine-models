@@ -89,17 +89,26 @@ where
 
     let problem = GivenUaProblem::new(target_ua);
 
+    let t_top_in = known.inlets.top.temperature.get::<kelvin>();
+
     let solution = bisection::solve(
         &model,
         &problem,
-        [
-            known.inlets.top.temperature.get::<kelvin>(),
-            known.inlets.bottom.temperature.get::<kelvin>(),
-        ],
+        [t_top_in, known.inlets.bottom.temperature.get::<kelvin>()],
         &config.bisection(),
         |event: &bisection::Event<'_, _, _>| {
             if let Err(EvalError::Model(SolveError::SecondLawViolation { .. })) = event.result() {
-                return Some(bisection::Action::assume_positive());
+                // Near the top inlet temperature, a second-law violation is
+                // floating-point noise — heat transfer is essentially zero,
+                // so UA ≈ 0 and the residual is negative.
+                // Farther away, it's a genuine overshoot — the candidate
+                // outlet temperature exceeds physical limits.
+                let near_inlet = (event.x() - t_top_in).abs() < 1e-9;
+                return Some(if near_inlet {
+                    bisection::Action::assume_negative()
+                } else {
+                    bisection::Action::assume_positive()
+                });
             }
             None
         },
