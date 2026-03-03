@@ -61,7 +61,7 @@ impl AbstractState {
         let fluid_c = CString::new(fluid)?;
 
         let mut errcode: c_long = 0;
-        let mut buf = vec![0u8; MSG_BUF_LEN];
+        let mut buf = [0u8; MSG_BUF_LEN];
 
         let _guard = COOLPROP_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
@@ -91,7 +91,7 @@ impl AbstractState {
     /// Returns [`WrapperError::CoolProp`] if CoolProp rejects the state.
     pub fn update(&mut self, pair: InputPair, v1: f64, v2: f64) -> Result<(), WrapperError> {
         let mut errcode: c_long = 0;
-        let mut buf = vec![0u8; MSG_BUF_LEN];
+        let mut buf = [0u8; MSG_BUF_LEN];
 
         let _guard = COOLPROP_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
@@ -126,7 +126,7 @@ impl AbstractState {
     /// Returns [`WrapperError::CoolProp`] if CoolProp signals an error.
     pub fn keyed_output(&self, param: OutputParam) -> Result<f64, WrapperError> {
         let mut errcode: c_long = 0;
-        let mut buf = vec![0u8; MSG_BUF_LEN];
+        let mut buf = [0u8; MSG_BUF_LEN];
 
         let _guard = COOLPROP_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
@@ -153,7 +153,7 @@ impl AbstractState {
 impl Drop for AbstractState {
     fn drop(&mut self) {
         let mut errcode: c_long = 0;
-        let mut buf = vec![0u8; MSG_BUF_LEN];
+        let mut buf = [0u8; MSG_BUF_LEN];
 
         let _guard = COOLPROP_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
