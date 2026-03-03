@@ -56,6 +56,15 @@ crates.io's package size limit, so this feature is not available from a crates.i
 git clone --recurse-submodules https://github.com/isentropic-dev/twine-models
 ```
 
+#### `COOLPROP_SOURCE_DIR`
+
+If you have a local CoolProp checkout (e.g., when installing from crates.io), set
+`COOLPROP_SOURCE_DIR` to point `build.rs` at it instead of the vendored submodule:
+
+```sh
+COOLPROP_SOURCE_DIR=/path/to/CoolProp cargo build --features coolprop-static
+```
+
 For WASM builds, the Emscripten SDK must be installed with `em-config` on PATH:
 
 ```sh
