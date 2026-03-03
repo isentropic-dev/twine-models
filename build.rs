@@ -1,6 +1,9 @@
 fn main() {
     #[cfg(feature = "coolprop-static")]
     coolprop_static::build();
+
+    #[cfg(feature = "coolprop-dylib")]
+    coolprop_dylib::link();
 }
 
 #[cfg(feature = "coolprop-static")]
@@ -51,5 +54,18 @@ mod coolprop_static {
             "macos" => println!("cargo:rustc-link-lib=c++"),
             _ => println!("cargo:rustc-link-lib=stdc++"),
         }
+    }
+}
+
+#[cfg(feature = "coolprop-dylib")]
+mod coolprop_dylib {
+    /// Tell the linker to link against the prebuilt CoolProp shared library.
+    ///
+    /// The library search path is already provided by the platform-specific
+    /// `coolprop-sys-*` dependency crate. We only need to emit the link
+    /// directive so the symbols from our `extern "C"` declarations resolve.
+    pub fn link() {
+        println!("cargo:rerun-if-changed=build.rs");
+        println!("cargo:rustc-link-lib=dylib=CoolProp");
     }
 }

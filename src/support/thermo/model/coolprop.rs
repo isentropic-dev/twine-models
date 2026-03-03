@@ -37,14 +37,20 @@ pub use error::CoolPropError;
 ///
 /// Implementors provide the backend and fluid identifiers needed to construct a
 /// CoolProp `AbstractState`.
-#[cfg_attr(docsrs, doc(cfg(feature = "coolprop-static")))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "coolprop-static", feature = "coolprop-dylib")))
+)]
 pub trait CoolPropFluid: Default + Send + Sync + 'static {
     const BACKEND: &'static str;
     const NAME: &'static str;
 }
 
 /// A fluid property model backed by `CoolProp`.
-#[cfg_attr(docsrs, doc(cfg(feature = "coolprop-static")))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "coolprop-static", feature = "coolprop-dylib")))
+)]
 pub struct CoolProp<F: CoolPropFluid> {
     state: Mutex<AbstractState>,
     _f: PhantomData<F>,
@@ -300,11 +306,11 @@ mod tests {
 
     use approx::assert_relative_eq;
     use uom::si::{
-        available_energy::kilojoule_per_kilogram,
+        available_energy::{joule_per_kilogram, kilojoule_per_kilogram},
         f64::{MassDensity, ThermodynamicTemperature},
         mass_density::kilogram_per_cubic_meter,
         molar_mass::gram_per_mole,
-        pressure::megapascal,
+        pressure::{megapascal, pascal},
         specific_heat_capacity::{joule_per_kilogram_kelvin, kilojoule_per_kilogram_kelvin},
         thermodynamic_temperature::{degree_celsius, kelvin},
     };
@@ -333,6 +339,70 @@ mod tests {
             MassDensity::new::<kilogram_per_cubic_meter>(1000.0),
             Water,
         )
+    }
+
+    // ── Spot-check test ─────────────────────────────────────────────────
+    //
+    // Asserts exact `f64` values for CO₂ at 42 °C / 670 kg/m³.
+    // Running this test with both `coolprop-static` and `coolprop-dylib`
+    // verifies the from-source build matches the prebuilt shared library
+    // at full precision (not just within an epsilon).
+    //
+    // Reference values captured from CoolProp v7.2.0 (official macOS
+    // AArch64 shared library via `coolprop-sys-macos-aarch64`).
+
+    #[test]
+    fn co2_spot_check_pressure() {
+        let model = co2_model();
+        let state = co2_state();
+        let value = model.pressure(&state).unwrap().get::<pascal>();
+        assert_eq!(value, 1.133_616_265_282_128_75e7);
+    }
+
+    #[test]
+    fn co2_spot_check_internal_energy() {
+        let model = co2_model();
+        let state = co2_state();
+        let value = model
+            .internal_energy(&state)
+            .unwrap()
+            .get::<joule_per_kilogram>();
+        assert_eq!(value, 2.909_564_765_862_164_79e5);
+    }
+
+    #[test]
+    fn co2_spot_check_enthalpy() {
+        let model = co2_model();
+        let state = co2_state();
+        let value = model.enthalpy(&state).unwrap().get::<joule_per_kilogram>();
+        assert_eq!(value, 3.078_761_223_366_960_18e5);
+    }
+
+    #[test]
+    fn co2_spot_check_entropy() {
+        let model = co2_model();
+        let state = co2_state();
+        let value = model
+            .entropy(&state)
+            .unwrap()
+            .get::<joule_per_kilogram_kelvin>();
+        assert_eq!(value, 1.333_274_008_373_242_17e3);
+    }
+
+    #[test]
+    fn co2_spot_check_cp() {
+        let model = co2_model();
+        let state = co2_state();
+        let value = model.cp(&state).unwrap().get::<joule_per_kilogram_kelvin>();
+        assert_eq!(value, 4.125_049_199_079_285_24e3);
+    }
+
+    #[test]
+    fn co2_spot_check_cv() {
+        let model = co2_model();
+        let state = co2_state();
+        let value = model.cv(&state).unwrap().get::<joule_per_kilogram_kelvin>();
+        assert_eq!(value, 9.805_326_153_531_055_98e2);
     }
 
     #[test]
