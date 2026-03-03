@@ -17,7 +17,15 @@ mod coolprop_static {
     pub fn build() {
         let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
         let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-        let source_dir = manifest_dir.join("vendor/CoolProp");
+
+        // Allow COOLPROP_SOURCE_DIR to override the default vendor location.
+        // This lets crates.io consumers point at a local CoolProp checkout
+        // instead of requiring a full git clone with submodules.
+        println!("cargo:rerun-if-env-changed=COOLPROP_SOURCE_DIR");
+        let source_dir = env::var("COOLPROP_SOURCE_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| manifest_dir.join("vendor/CoolProp"));
+
         let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
 
         // Rebuild if the build script or the CoolProp header changes.
@@ -55,6 +63,15 @@ mod coolprop_static {
             .define(
                 "CMAKE_ARCHIVE_OUTPUT_DIRECTORY",
                 lib_dir.to_str().expect("lib_dir path is valid UTF-8"),
+            )
+            // Redirect cmake's install step into OUT_DIR so it doesn't write
+            // install_root/ into the CoolProp source tree (see issue #56).
+            .define(
+                "CMAKE_INSTALL_PREFIX",
+                out_dir
+                    .join("coolprop-install")
+                    .to_str()
+                    .expect("out_dir path is valid UTF-8"),
             )
             .build();
 
@@ -132,6 +149,15 @@ mod coolprop_static {
                 &format!(
                     "-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY={}",
                     lib_dir.to_str().expect("lib_dir path is valid UTF-8")
+                ),
+                // Redirect cmake's install step into OUT_DIR so it doesn't write
+                // install_root/ into the CoolProp source tree (see issue #56).
+                &format!(
+                    "-DCMAKE_INSTALL_PREFIX={}",
+                    out_dir
+                        .join("coolprop-install")
+                        .to_str()
+                        .expect("out_dir path is valid UTF-8")
                 ),
             ])
             .status()
