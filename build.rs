@@ -34,7 +34,7 @@ mod coolprop_static {
         }
     }
 
-    /// Build CoolProp as a static library for native targets using the `cmake` crate.
+    /// Build `CoolProp` as a static library for native targets using the `cmake` crate.
     fn build_native(source_dir: &Path, out_dir: &Path) {
         // CoolProp's CMakeLists.txt forces CMAKE_INSTALL_PREFIX to its own
         // default, so we cannot rely on cmake's install step to put the
@@ -69,7 +69,7 @@ mod coolprop_static {
         }
     }
 
-    /// Build CoolProp as a static library for WASM via Emscripten.
+    /// Build `CoolProp` as a static library for WASM via Emscripten.
     ///
     /// The `cmake` crate cannot be used here — it injects
     /// `--target=wasm32-unknown-unknown` and `-fno-exceptions`, both
@@ -77,13 +77,12 @@ mod coolprop_static {
     /// We invoke cmake directly via `std::process::Command`.
     fn build_wasm(source_dir: &Path, out_dir: &Path) {
         let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
-        if target_os != "emscripten" {
-            panic!(
-                "CoolProp requires Emscripten for WASM builds. \
-                 Use target `wasm32-unknown-emscripten`, \
-                 not `wasm32-unknown-unknown`."
-            );
-        }
+        assert!(
+            target_os == "emscripten",
+            "CoolProp requires Emscripten for WASM builds. \
+             Use target `wasm32-unknown-emscripten`, \
+             not `wasm32-unknown-unknown`."
+        );
 
         let emscripten_root = discover_emscripten_root();
         let toolchain_file = emscripten_root.join("cmake/Modules/Platform/Emscripten.cmake");
