@@ -1,6 +1,6 @@
-//! WASM smoke test for CoolProp.
+//! WASM smoke test for `CoolProp`.
 //!
-//! Verifies that CoolProp compiled to WASM via Emscripten produces the same
+//! Verifies that `CoolProp` compiled to WASM via Emscripten produces the same
 //! thermodynamic results as the native build.
 //! Run with:
 //! ```sh
