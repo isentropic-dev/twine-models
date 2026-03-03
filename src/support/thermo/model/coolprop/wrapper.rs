@@ -2,7 +2,7 @@
 
 use std::{
     ffi::{CString, NulError},
-    os::raw::c_long,
+    os::raw::{c_char, c_long},
     sync::Mutex,
 };
 
@@ -20,7 +20,6 @@ const MSG_BUF_LEN: usize = 512;
 /// have not been audited for global mutable state.
 /// This lock is conservative: it may be removable if a thorough audit or
 /// upstream guarantee confirms per-handle thread safety.
-/// See `.planning/003-coolprop-global-lock.md` for investigation notes.
 ///
 /// The `CoolProp<F>` wrapper adds a second, per-instance
 /// `Mutex<AbstractState>` to keep `update`/`keyed_output` pairs atomic.
@@ -73,7 +72,7 @@ impl AbstractState {
                 backend_c.as_ptr(),
                 fluid_c.as_ptr(),
                 &mut errcode,
-                buf.as_mut_ptr().cast::<std::os::raw::c_char>(),
+                buf.as_mut_ptr().cast::<c_char>(),
                 MSG_BUF_LEN as c_long,
             )
         };
@@ -105,7 +104,7 @@ impl AbstractState {
                 v1,
                 v2,
                 &mut errcode,
-                buf.as_mut_ptr().cast::<std::os::raw::c_char>(),
+                buf.as_mut_ptr().cast::<c_char>(),
                 MSG_BUF_LEN as c_long,
             );
         }
@@ -138,7 +137,7 @@ impl AbstractState {
                 self.handle,
                 param.as_c_long(),
                 &mut errcode,
-                buf.as_mut_ptr().cast::<std::os::raw::c_char>(),
+                buf.as_mut_ptr().cast::<c_char>(),
                 MSG_BUF_LEN as c_long,
             )
         };
@@ -165,7 +164,7 @@ impl Drop for AbstractState {
             ffi::AbstractState_free(
                 self.handle,
                 &mut errcode,
-                buf.as_mut_ptr().cast::<std::os::raw::c_char>(),
+                buf.as_mut_ptr().cast::<c_char>(),
                 MSG_BUF_LEN as c_long,
             );
         }
