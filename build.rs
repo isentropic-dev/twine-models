@@ -12,7 +12,10 @@ mod coolprop_static {
         let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
         let source_dir = manifest_dir.join("vendor/CoolProp");
 
-        // Rebuild if the header or build script changes.
+        // Rebuild if the build script or the CoolProp header changes.
+        // The submodule is pinned to a specific commit, so source changes
+        // only happen through a deliberate submodule update. Because of this,
+        // there is no need to watch individual source files.
         println!("cargo:rerun-if-changed=build.rs");
         println!("cargo:rerun-if-changed=vendor/CoolProp/include/CoolPropLib.h");
 
