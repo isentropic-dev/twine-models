@@ -157,6 +157,9 @@ mod coolprop_static {
         println!("cargo:rustc-link-search=native={}", lib_dir.display());
         println!("cargo:rustc-link-lib=static=CoolProp");
 
+        // No explicit C++ stdlib link needed — Emscripten's toolchain links
+        // its own C++ runtime automatically during final linking.
+
         // CoolProp decompresses ~25 MB of fluid data at init, exceeding the
         // default 16 MB WASM heap.
         println!("cargo:rustc-link-arg=-sALLOW_MEMORY_GROWTH=1");
