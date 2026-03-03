@@ -7,6 +7,13 @@
 /// This prevents floating-point noise in real-gas property evaluations
 /// from being misclassified as directional heat flow, which would cause
 /// spurious second-law violations in the solver.
+///
+/// **Limitation:** this threshold scales with `h_in`, so it weakens when
+/// `h_in` is near zero. Since enthalpy is defined relative to an arbitrary
+/// reference state, there is no fully general fix — an absolute threshold
+/// would have the same problem in a different reference frame. If a future
+/// fluid's reference state places inlet enthalpies near zero and the solver
+/// starts producing spurious second-law violations, this is the place to revisit.
 const ENTHALPY_RELATIVE_ZERO: f64 = 1e-12;
 
 use crate::support::{
