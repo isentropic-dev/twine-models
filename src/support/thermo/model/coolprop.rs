@@ -292,6 +292,8 @@ impl<F: CoolPropFluid> StateFrom<(F, SpecificEnthalpy, SpecificEntropy)> for Coo
 // Thread safety is provided by `COOLPROP_LOCK` in `wrapper.rs`, which serializes
 // all CoolProp FFI calls. The local `Mutex<AbstractState>` provides interior
 // mutability and keeps update/query call pairs atomic.
+// TODO: remove when CoolProp<F> gains a public method that exercises the
+// Send + Sync bound (e.g., a parallel property evaluation API).
 #[allow(dead_code)]
 const _: () = {
     fn assert_send_sync<T: Send + Sync>() {}
@@ -306,11 +308,11 @@ mod tests {
 
     use approx::assert_relative_eq;
     use uom::si::{
-        available_energy::{joule_per_kilogram, kilojoule_per_kilogram},
+        available_energy::kilojoule_per_kilogram,
         f64::{MassDensity, ThermodynamicTemperature},
         mass_density::kilogram_per_cubic_meter,
         molar_mass::gram_per_mole,
-        pressure::{megapascal, pascal},
+        pressure::megapascal,
         specific_heat_capacity::{joule_per_kilogram_kelvin, kilojoule_per_kilogram_kelvin},
         thermodynamic_temperature::{degree_celsius, kelvin},
     };
