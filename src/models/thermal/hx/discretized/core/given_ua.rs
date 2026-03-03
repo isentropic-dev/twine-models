@@ -4,6 +4,17 @@
 //! the top stream outlet temperature until the achieved conductance converges
 //! to the desired value.
 
+/// Temperature threshold (in kelvin) for distinguishing FP noise from real
+/// heat transfer at the bisection bracket boundary.
+///
+/// When the candidate top outlet temperature is within this distance of the
+/// top inlet temperature, any `SecondLawViolation` is treated as numerical
+/// noise (UA ≈ 0) rather than a genuine overshoot.
+///
+/// The value is three orders of magnitude below the solver's default
+/// temperature tolerance (1e-6 K), so it won't interfere with real solutions.
+const INLET_PROXIMITY_THRESHOLD_K: f64 = 1e-9;
+
 mod config;
 mod error;
 mod problem;
@@ -103,7 +114,7 @@ where
                 // so UA ≈ 0 and the residual is negative.
                 // Farther away, it's a genuine overshoot — the candidate
                 // outlet temperature exceeds physical limits.
-                let near_inlet = (event.x() - t_top_in).abs() < 1e-9;
+                let near_inlet = (event.x() - t_top_in).abs() < INLET_PROXIMITY_THRESHOLD_K;
                 return Some(if near_inlet {
                     bisection::Action::assume_negative()
                 } else {
