@@ -10,15 +10,17 @@ description = "Domain-specific models and model-building tools for Twine"
 
 [dependencies]
 num-traits = "0.2"
-rfluids = { version = "0.3.0", optional = true }
 thiserror = "2.0"
 twine-core = "0.5"
 twine-solvers = "0.5"
 uom = "0.36"
 
+[build-dependencies]
+cmake = { version = "0.1", optional = true }
+
 [features]
 default = []
-coolprop = ["dep:rfluids"]
+coolprop = ["dep:cmake"]
 
 [dev-dependencies]
 approx = "0.5"
