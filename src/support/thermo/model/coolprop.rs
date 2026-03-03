@@ -37,14 +37,12 @@ pub use error::CoolPropError;
 ///
 /// Implementors provide the backend and fluid identifiers needed to construct a
 /// CoolProp `AbstractState`.
-#[cfg_attr(docsrs, doc(cfg(feature = "coolprop-static")))]
 pub trait CoolPropFluid: Default + Send + Sync + 'static {
     const BACKEND: &'static str;
     const NAME: &'static str;
 }
 
 /// A fluid property model backed by `CoolProp`.
-#[cfg_attr(docsrs, doc(cfg(feature = "coolprop-static")))]
 pub struct CoolProp<F: CoolPropFluid> {
     state: Mutex<AbstractState>,
     _f: PhantomData<F>,
@@ -286,6 +284,8 @@ impl<F: CoolPropFluid> StateFrom<(F, SpecificEnthalpy, SpecificEntropy)> for Coo
 // Thread safety is provided by `COOLPROP_LOCK` in `wrapper.rs`, which serializes
 // all CoolProp FFI calls. The local `Mutex<AbstractState>` provides interior
 // mutability and keeps update/query call pairs atomic.
+// TODO: remove when CoolProp<F> gains a public method that exercises the
+// Send + Sync bound (e.g., a parallel property evaluation API).
 #[allow(dead_code)]
 const _: () = {
     fn assert_send_sync<T: Send + Sync>() {}
@@ -333,6 +333,76 @@ mod tests {
             MassDensity::new::<kilogram_per_cubic_meter>(1000.0),
             Water,
         )
+    }
+
+    // ── Spot-check tests ──────────────────────────────────────────────
+    //
+    // Assert exact `f64` values for CO₂ at 42 °C / 670 kg/m³.
+    // Running with both `coolprop-static` and `coolprop-dylib` verifies
+    // the from-source build matches the prebuilt shared library at full
+    // precision (not just within an epsilon).
+    //
+    // Reference values captured from CoolProp v7.2.0 (official macOS
+    // AArch64 shared library via `coolprop-sys-macos-aarch64`).
+
+    #[test]
+    #[ignore = "offline verification — run manually when updating CoolProp"]
+    fn co2_spot_check_pressure() {
+        let model = co2_model();
+        let state = co2_state();
+        let value = model.pressure(&state).unwrap().get::<pascal>();
+        assert_eq!(value, 1.133_616_265_282_128_8e7);
+    }
+
+    #[test]
+    #[ignore = "offline verification — run manually when updating CoolProp"]
+    fn co2_spot_check_internal_energy() {
+        let model = co2_model();
+        let state = co2_state();
+        let value = model
+            .internal_energy(&state)
+            .unwrap()
+            .get::<joule_per_kilogram>();
+        assert_eq!(value, 2.909_564_765_862_165e5);
+    }
+
+    #[test]
+    #[ignore = "offline verification — run manually when updating CoolProp"]
+    fn co2_spot_check_enthalpy() {
+        let model = co2_model();
+        let state = co2_state();
+        let value = model.enthalpy(&state).unwrap().get::<joule_per_kilogram>();
+        assert_eq!(value, 3.078_761_223_366_96e5);
+    }
+
+    #[test]
+    #[ignore = "offline verification — run manually when updating CoolProp"]
+    fn co2_spot_check_entropy() {
+        let model = co2_model();
+        let state = co2_state();
+        let value = model
+            .entropy(&state)
+            .unwrap()
+            .get::<joule_per_kilogram_kelvin>();
+        assert_eq!(value, 1.333_274_008_373_242_2e3);
+    }
+
+    #[test]
+    #[ignore = "offline verification — run manually when updating CoolProp"]
+    fn co2_spot_check_cp() {
+        let model = co2_model();
+        let state = co2_state();
+        let value = model.cp(&state).unwrap().get::<joule_per_kilogram_kelvin>();
+        assert_eq!(value, 4.125_049_199_079_285e3);
+    }
+
+    #[test]
+    #[ignore = "offline verification — run manually when updating CoolProp"]
+    fn co2_spot_check_cv() {
+        let model = co2_model();
+        let state = co2_state();
+        let value = model.cv(&state).unwrap().get::<joule_per_kilogram_kelvin>();
+        assert_eq!(value, 9.805_326_153_531_056e2);
     }
 
     #[test]

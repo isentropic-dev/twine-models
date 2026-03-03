@@ -4,10 +4,12 @@ use uom::si::{
     specific_heat_capacity::joule_per_kilogram_kelvin,
 };
 
-use crate::support::thermo::model::perfect_gas::{PerfectGasFluid, PerfectGasParameters};
-use crate::support::units::SpecificGasConstant;
+use crate::support::{
+    thermo::model::perfect_gas::{PerfectGasFluid, PerfectGasParameters},
+    units::SpecificGasConstant,
+};
 
-#[cfg(feature = "coolprop-static")]
+#[cfg(any(feature = "coolprop-static", feature = "coolprop-dylib"))]
 use crate::support::thermo::model::coolprop::CoolPropFluid;
 
 /// Canonical identifier for carbon dioxide.
@@ -31,7 +33,7 @@ impl StepIntegrable<Time> for CarbonDioxide {
     }
 }
 
-#[cfg(feature = "coolprop-static")]
+#[cfg(any(feature = "coolprop-static", feature = "coolprop-dylib"))]
 impl CoolPropFluid for CarbonDioxide {
     const BACKEND: &'static str = "HEOS";
     const NAME: &'static str = "CarbonDioxide";

@@ -29,5 +29,11 @@
 //! Note: Only utilities at the crate-level (in [`support`]) are part of the public API.
 //! Model-specific and domain-specific utility code remains private.
 
+#[cfg(all(feature = "coolprop-dylib", feature = "coolprop-static"))]
+compile_error!(
+    "features `coolprop-dylib` and `coolprop-static` are mutually exclusive; \
+     enable one or the other, not both"
+);
+
 pub mod models;
 pub mod support;

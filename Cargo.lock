@@ -675,6 +675,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "coolprop-sys-linux-x86-64"
+version = "7.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "343ddac2d35f331d27f0825f692cd7d253e3d522b6dbb38670ebc422a64bb736"
+
+[[package]]
+name = "coolprop-sys-macos-aarch64"
+version = "7.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d479975e6f0ab1bb354e201f43f8405265b8d7071283284588cea4b700ddd71"
+
+[[package]]
+name = "coolprop-sys-macos-x86-64"
+version = "7.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7a44c07586a604d576193e28dfa5142ed90566db267d79b9c4b12482d1fc756"
+
+[[package]]
+name = "coolprop-sys-windows-aarch64"
+version = "7.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf0bc026e121ae4921832960ca1f3a4c766d1286c671dac730e3009b010955d7"
+
+[[package]]
+name = "coolprop-sys-windows-x86-64"
+version = "7.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53698ece432c43885165239c8eba70ce6cb48bcf7b5c5213f3201b8007193513"
+
+[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3112,6 +3142,11 @@ version = "0.1.0"
 dependencies = [
  "approx",
  "cmake",
+ "coolprop-sys-linux-x86-64",
+ "coolprop-sys-macos-aarch64",
+ "coolprop-sys-macos-x86-64",
+ "coolprop-sys-windows-aarch64",
+ "coolprop-sys-windows-x86-64",
  "jiff",
  "num-traits",
  "thiserror 2.0.18",
