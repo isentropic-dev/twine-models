@@ -329,6 +329,10 @@ mod tests {
             out.ua.get::<watt_per_kelvin>() > 0.0,
             "UA should be positive"
         );
+        assert!(
+            out.effectiveness.get() > 0.0 && out.effectiveness.get() < 1.0,
+            "effectiveness should be between 0 and 1 exclusive",
+        );
     }
 
     #[test]
@@ -347,6 +351,10 @@ mod tests {
             out.ua.get::<watt_per_kelvin>() > 0.0,
             "UA should be positive"
         );
+        assert!(
+            out.effectiveness.get() > 0.0 && out.effectiveness.get() < 1.0,
+            "effectiveness should be between 0 and 1 exclusive",
+        );
     }
 
     #[test]
@@ -360,6 +368,26 @@ mod tests {
         assert_relative_eq!(out.ua.get::<watt_per_kelvin>(), 0.0);
         assert_relative_eq!(out.top_outlet.temperature.get::<kelvin>(), 400.0);
         assert_relative_eq!(out.bottom_outlet.temperature.get::<kelvin>(), 600.0);
+        assert_relative_eq!(out.effectiveness.get(), 0.0);
+    }
+
+    #[test]
+    fn second_law_violation_returns_error() {
+        // Top inlet 400 K, bottom inlet 600 K.
+        // Specifying top outlet at 700 K exceeds the bottom inlet,
+        // which violates the second law.
+        let inp = input_top(400.0, 600.0, 700.0);
+
+        let recuperator = RecuperatorGivenOutlet::new(thermo(), 10).unwrap();
+        let result = recuperator.call(&inp);
+
+        assert!(
+            matches!(
+                result,
+                Err(RecuperatorGivenOutletError::SecondLawViolation { .. })
+            ),
+            "expected SecondLawViolation, got {result:?}",
+        );
     }
 
     #[test]
