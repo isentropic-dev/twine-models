@@ -8,6 +8,12 @@ pub(crate) mod core;
 pub mod recuperator;
 
 pub use recuperator::{
+    RecuperatorGivenUa, RecuperatorGivenUaConfig, RecuperatorGivenUaError, RecuperatorGivenUaInput,
+    RecuperatorGivenUaOutput,
+};
+
+#[allow(deprecated)]
+pub use recuperator::{
     Recuperator, RecuperatorConfig, RecuperatorError, RecuperatorInput, RecuperatorOutput,
 };
 

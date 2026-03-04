@@ -14,7 +14,7 @@ use crate::{
 
 /// A single-fluid counterflow heat exchanger model for heat recovery.
 ///
-/// `Recuperator` implements [`Model`] for use in cycle simulations where heat
+/// `RecuperatorGivenUa` implements [`Model`] for use in cycle simulations where heat
 /// is transferred between two streams of the same working fluid, typically a
 /// hot stream leaving a turbine and a cold stream leaving a compressor.
 ///
@@ -55,7 +55,7 @@ use crate::{
 /// use twine_core::Model;
 /// use twine_models::{
 ///     models::thermal::hx::discretized::{
-///         Recuperator, RecuperatorConfig, RecuperatorInput,
+///         RecuperatorGivenUa, RecuperatorGivenUaConfig, RecuperatorGivenUaInput,
 ///         Inlets, MassFlows, PressureDrops,
 ///     },
 ///     support::thermo::{
@@ -77,7 +77,7 @@ use crate::{
 /// let thermo = PerfectGas::<Air>::new().unwrap();
 ///
 /// // Construct the recuperator: 10 segments, default solver tolerances.
-/// let recuperator = Recuperator::new(&thermo, 10, RecuperatorConfig::default()).unwrap();
+/// let recuperator = RecuperatorGivenUa::new(&thermo, 10, RecuperatorGivenUaConfig::default()).unwrap();
 ///
 /// // Define operating conditions.
 /// let hot_inlet = State::new(
@@ -91,7 +91,7 @@ use crate::{
 ///     Air,
 /// );
 ///
-/// let result = recuperator.call(&RecuperatorInput {
+/// let result = recuperator.call(&RecuperatorGivenUaInput {
 ///     inlets: Inlets { top: cold_inlet, bottom: hot_inlet },
 ///     mass_flows: MassFlows::new_unchecked(
 ///         MassRate::new::<kilogram_per_second>(1.0),
@@ -106,16 +106,16 @@ use crate::{
 /// assert!(result.bottom_outlet.temperature < hot_inlet.temperature);
 /// ```
 #[derive(Debug, Clone)]
-pub struct Recuperator<Fluid, Thermo> {
+pub struct RecuperatorGivenUa<Fluid, Thermo> {
     thermo: Thermo,
     segments: usize,
-    config: RecuperatorConfig,
+    config: RecuperatorGivenUaConfig,
     _fluid: PhantomData<Fluid>,
 }
 
-/// Recuperator solver configuration.
+/// Solver configuration for [`RecuperatorGivenUa`].
 #[derive(Debug, Clone, Copy)]
-pub struct RecuperatorConfig {
+pub struct RecuperatorGivenUaConfig {
     /// Relative tolerance on UA (dimensionless).
     ///
     /// Convergence is reached when
@@ -129,7 +129,7 @@ pub struct RecuperatorConfig {
     pub max_iters: usize,
 }
 
-impl Default for RecuperatorConfig {
+impl Default for RecuperatorGivenUaConfig {
     fn default() -> Self {
         Self {
             ua_rel_tol: 1e-6,
@@ -139,9 +139,9 @@ impl Default for RecuperatorConfig {
     }
 }
 
-/// Recuperator inputs.
+/// Inputs for [`RecuperatorGivenUa`].
 #[derive(Debug, Clone)]
-pub struct RecuperatorInput<Fluid> {
+pub struct RecuperatorGivenUaInput<Fluid> {
     /// Inlet states for top and bottom streams.
     pub inlets: Inlets<Fluid, Fluid>,
 
@@ -155,9 +155,9 @@ pub struct RecuperatorInput<Fluid> {
     pub ua: ThermalConductance,
 }
 
-/// Recuperator outputs.
+/// Outputs from [`RecuperatorGivenUa`].
 #[derive(Debug, Clone)]
-pub struct RecuperatorOutput<Fluid> {
+pub struct RecuperatorGivenUaOutput<Fluid> {
     /// Top stream outlet state.
     pub top_outlet: State<Fluid>,
 
@@ -182,7 +182,7 @@ pub struct RecuperatorOutput<Fluid> {
 
 /// Errors from recuperator construction and solving.
 #[derive(Debug, Error)]
-pub enum RecuperatorError {
+pub enum RecuperatorGivenUaError {
     /// The segment count is not supported.
     #[error("unsupported segment count {0}; supported values are 1, 5, 10, 20, 50")]
     UnsupportedSegments(usize),
@@ -215,20 +215,20 @@ pub enum RecuperatorError {
     },
 }
 
-impl<Fluid, Thermo> Recuperator<Fluid, Thermo> {
+impl<Fluid, Thermo> RecuperatorGivenUa<Fluid, Thermo> {
     /// Creates a recuperator model.
     ///
     /// # Errors
     ///
-    /// Returns [`RecuperatorError::UnsupportedSegments`] if `segments` is not in
+    /// Returns [`RecuperatorGivenUaError::UnsupportedSegments`] if `segments` is not in
     /// `{1, 5, 10, 20, 50}`.
     pub fn new(
         thermo: Thermo,
         segments: usize,
-        config: RecuperatorConfig,
-    ) -> Result<Self, RecuperatorError> {
+        config: RecuperatorGivenUaConfig,
+    ) -> Result<Self, RecuperatorGivenUaError> {
         if !matches!(segments, 1 | 5 | 10 | 20 | 50) {
-            return Err(RecuperatorError::UnsupportedSegments(segments));
+            return Err(RecuperatorGivenUaError::UnsupportedSegments(segments));
         }
 
         Ok(Self {
@@ -241,8 +241,8 @@ impl<Fluid, Thermo> Recuperator<Fluid, Thermo> {
 
     fn solve<const N: usize>(
         &self,
-        input: &RecuperatorInput<Fluid>,
-    ) -> Result<RecuperatorOutput<Fluid>, RecuperatorError>
+        input: &RecuperatorGivenUaInput<Fluid>,
+    ) -> Result<RecuperatorGivenUaOutput<Fluid>, RecuperatorGivenUaError>
     where
         Fluid: Clone,
         Thermo: DiscretizedHxThermoModel<Fluid>,
@@ -266,20 +266,20 @@ impl<Fluid, Thermo> Recuperator<Fluid, Thermo> {
             given_ua_config,
             &self.thermo,
         )
-        .map_err(RecuperatorError::from)?;
+        .map_err(RecuperatorGivenUaError::from)?;
 
         Ok(Self::to_output(given_ua_results))
     }
 
     fn to_output<const N: usize>(
         given_ua_results: GivenUaResults<Fluid, Fluid, N>,
-    ) -> RecuperatorOutput<Fluid>
+    ) -> RecuperatorGivenUaOutput<Fluid>
     where
         Fluid: Clone,
     {
         let results = given_ua_results.results;
 
-        RecuperatorOutput {
+        RecuperatorGivenUaOutput {
             top_outlet: results.top[N - 1].clone(),
             bottom_outlet: results.bottom[0].clone(),
             q_dot: results.q_dot,
@@ -291,14 +291,14 @@ impl<Fluid, Thermo> Recuperator<Fluid, Thermo> {
     }
 }
 
-impl<Fluid, Thermo> Model for Recuperator<Fluid, Thermo>
+impl<Fluid, Thermo> Model for RecuperatorGivenUa<Fluid, Thermo>
 where
     Fluid: Clone,
     Thermo: DiscretizedHxThermoModel<Fluid>,
 {
-    type Input = RecuperatorInput<Fluid>;
-    type Output = RecuperatorOutput<Fluid>;
-    type Error = RecuperatorError;
+    type Input = RecuperatorGivenUaInput<Fluid>;
+    type Output = RecuperatorGivenUaOutput<Fluid>;
+    type Error = RecuperatorGivenUaError;
 
     fn call(&self, input: &Self::Input) -> Result<Self::Output, Self::Error> {
         match self.segments {
@@ -312,7 +312,7 @@ where
     }
 }
 
-impl From<GivenUaError> for RecuperatorError {
+impl From<GivenUaError> for RecuperatorGivenUaError {
     fn from(value: GivenUaError) -> Self {
         match value {
             GivenUaError::NegativeUa(ua) => Self::NegativeUa(ua),
@@ -359,8 +359,8 @@ mod tests {
         )
     }
 
-    fn input(top: f64, bottom: f64, ua_wpk: f64) -> RecuperatorInput<TestFluid> {
-        RecuperatorInput {
+    fn input(top: f64, bottom: f64, ua_wpk: f64) -> RecuperatorGivenUaInput<TestFluid> {
+        RecuperatorGivenUaInput {
             inlets: Inlets {
                 top: state(top),
                 bottom: state(bottom),
@@ -375,7 +375,12 @@ mod tests {
     fn new_accepts_supported_segment_counts() {
         for n in [1, 5, 10, 20, 50] {
             assert!(
-                Recuperator::<TestFluid, _>::new(thermo(), n, RecuperatorConfig::default()).is_ok(),
+                RecuperatorGivenUa::<TestFluid, _>::new(
+                    thermo(),
+                    n,
+                    RecuperatorGivenUaConfig::default()
+                )
+                .is_ok(),
                 "segment count {n} should be accepted",
             );
         }
@@ -386,8 +391,12 @@ mod tests {
         for n in [0, 2, 3, 100] {
             assert!(
                 matches!(
-                    Recuperator::<TestFluid, _>::new(thermo(), n, RecuperatorConfig::default()),
-                    Err(RecuperatorError::UnsupportedSegments(_))
+                    RecuperatorGivenUa::<TestFluid, _>::new(
+                        thermo(),
+                        n,
+                        RecuperatorGivenUaConfig::default()
+                    ),
+                    Err(RecuperatorGivenUaError::UnsupportedSegments(_))
                 ),
                 "segment count {n} should be rejected",
             );
@@ -401,7 +410,8 @@ mod tests {
         let cold_inlet_temp = inp.inlets.top.temperature;
         let hot_inlet_temp = inp.inlets.bottom.temperature;
 
-        let recuperator = Recuperator::new(thermo(), 10, RecuperatorConfig::default()).unwrap();
+        let recuperator =
+            RecuperatorGivenUa::new(thermo(), 10, RecuperatorGivenUaConfig::default()).unwrap();
         let out = recuperator.call(&inp).unwrap();
 
         assert!(
@@ -418,7 +428,8 @@ mod tests {
     fn zero_ua_returns_inlets_unchanged() {
         let inp = input(400.0, 600.0, 0.0);
 
-        let recuperator = Recuperator::new(thermo(), 10, RecuperatorConfig::default()).unwrap();
+        let recuperator =
+            RecuperatorGivenUa::new(thermo(), 10, RecuperatorGivenUaConfig::default()).unwrap();
         let out = recuperator.call(&inp).unwrap();
 
         assert_relative_eq!(out.top_outlet.temperature.get::<kelvin>(), 400.0);
@@ -427,11 +438,12 @@ mod tests {
 
     #[test]
     fn negative_ua_returns_error() {
-        let recuperator = Recuperator::new(thermo(), 10, RecuperatorConfig::default()).unwrap();
+        let recuperator =
+            RecuperatorGivenUa::new(thermo(), 10, RecuperatorGivenUaConfig::default()).unwrap();
         let result = recuperator.call(&input(400.0, 600.0, -1.0));
 
         assert!(
-            matches!(result, Err(RecuperatorError::NegativeUa(_))),
+            matches!(result, Err(RecuperatorGivenUaError::NegativeUa(_))),
             "expected NegativeUa error",
         );
     }
@@ -471,10 +483,11 @@ mod tests {
                 ))
                 .unwrap();
 
-            let recuperator = Recuperator::new(&thermo, 5, RecuperatorConfig::default()).unwrap();
+            let recuperator =
+                RecuperatorGivenUa::new(&thermo, 5, RecuperatorGivenUaConfig::default()).unwrap();
 
             let result = recuperator
-                .call(&RecuperatorInput {
+                .call(&RecuperatorGivenUaInput {
                     inlets: Inlets {
                         top: cold_inlet,
                         bottom: hot_inlet,
@@ -520,10 +533,11 @@ mod tests {
                 ))
                 .unwrap();
 
-            let recuperator = Recuperator::new(&thermo, 5, RecuperatorConfig::default()).unwrap();
+            let recuperator =
+                RecuperatorGivenUa::new(&thermo, 5, RecuperatorGivenUaConfig::default()).unwrap();
 
             let result = recuperator
-                .call(&RecuperatorInput {
+                .call(&RecuperatorGivenUaInput {
                     inlets: Inlets {
                         top: cold_inlet,
                         bottom: hot_inlet,
@@ -574,10 +588,11 @@ mod tests {
                 ))
                 .unwrap();
 
-            let recuperator = Recuperator::new(&thermo, 5, RecuperatorConfig::default()).unwrap();
+            let recuperator =
+                RecuperatorGivenUa::new(&thermo, 5, RecuperatorGivenUaConfig::default()).unwrap();
 
             let result = recuperator
-                .call(&RecuperatorInput {
+                .call(&RecuperatorGivenUaInput {
                     inlets: Inlets {
                         top: cold_inlet,
                         bottom: hot_inlet,
@@ -602,3 +617,23 @@ mod tests {
         }
     }
 }
+
+/// Deprecated: use [`RecuperatorGivenUa`] instead.
+#[deprecated(since = "0.3.0", note = "renamed to RecuperatorGivenUa")]
+pub type Recuperator<Fluid, Thermo> = RecuperatorGivenUa<Fluid, Thermo>;
+
+/// Deprecated: use [`RecuperatorGivenUaConfig`] instead.
+#[deprecated(since = "0.3.0", note = "renamed to RecuperatorGivenUaConfig")]
+pub type RecuperatorConfig = RecuperatorGivenUaConfig;
+
+/// Deprecated: use [`RecuperatorGivenUaInput`] instead.
+#[deprecated(since = "0.3.0", note = "renamed to RecuperatorGivenUaInput")]
+pub type RecuperatorInput<Fluid> = RecuperatorGivenUaInput<Fluid>;
+
+/// Deprecated: use [`RecuperatorGivenUaOutput`] instead.
+#[deprecated(since = "0.3.0", note = "renamed to RecuperatorGivenUaOutput")]
+pub type RecuperatorOutput<Fluid> = RecuperatorGivenUaOutput<Fluid>;
+
+/// Deprecated: use [`RecuperatorGivenUaError`] instead.
+#[deprecated(since = "0.3.0", note = "renamed to RecuperatorGivenUaError")]
+pub type RecuperatorError = RecuperatorGivenUaError;
