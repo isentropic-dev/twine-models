@@ -12,8 +12,8 @@ exclude = ["vendor/"]
 [dependencies]
 num-traits = "0.2"
 thiserror = "2.0"
-twine-core = "0.5"
-twine-solvers = "0.5"
+twine-core = "0.6"
+twine-solvers = "0.6"
 uom = "0.36"
 
 [features]
@@ -32,7 +32,7 @@ approx = "0.5"
 jiff = "0.2"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-twine-observers = { version = "0.5", features = ["plot"] }
+twine-observers = { version = "0.6", features = ["plot"] }
 
 [build-dependencies]
 cmake = { version = "0.1", optional = true }

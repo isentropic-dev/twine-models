@@ -11,6 +11,13 @@ pub enum GivenUaError {
     #[error("target UA must be non-negative, got {0:?}")]
     NegativeUa(ThermalConductance),
 
+    /// The inlet temperatures are equal.
+    ///
+    /// The solver brackets the outlet temperature between the two inlet
+    /// temperatures. When they are equal, no bracket can be formed.
+    #[error("equal inlet temperatures: solver cannot form a search bracket")]
+    EqualInletTemperatures,
+
     /// A discretized heat exchanger solve failed.
     #[error("discretized solve failed")]
     Solve(#[from] SolveError),
