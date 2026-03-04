@@ -8,7 +8,12 @@ pub(crate) mod core;
 pub mod recuperator;
 
 pub use recuperator::{
-    Recuperator, RecuperatorConfig, RecuperatorError, RecuperatorInput, RecuperatorOutput,
+    OutletTemp, RecuperatorGivenOutlet, RecuperatorGivenOutletError, RecuperatorGivenOutletInput,
+    RecuperatorGivenOutletOutput, RecuperatorGivenUa, RecuperatorGivenUaConfig,
+    RecuperatorGivenUaError, RecuperatorGivenUaInput, RecuperatorGivenUaOutput,
 };
 
-pub use core::{HeatTransferRate, Inlets, MassFlows, MinDeltaT, PressureDrops};
+pub use core::{
+    Effectiveness, EffectivenessError, HeatTransferRate, Inlets, MassFlows, MinDeltaT,
+    PressureDrops,
+};

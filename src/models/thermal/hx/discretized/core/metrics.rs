@@ -6,34 +6,57 @@ use crate::support::{
 };
 use uom::{
     ConstZero,
-    si::f64::{MassRate, TemperatureInterval, ThermalConductance},
+    si::f64::{MassRate, Power, TemperatureInterval, ThermalConductance},
     si::temperature_interval::kelvin as delta_kelvin,
 };
 
 use super::{
-    HeatTransferRate, MinDeltaT,
+    Effectiveness, HeatTransferRate, MinDeltaT,
     solve::{Nodes, SolveError},
     traits::DiscretizedArrangement,
 };
 
-/// Computes total UA using a segment-by-segment effectiveness-NTU analysis.
-pub(super) fn compute_ua<Arrangement, TopFluid, BottomFluid, const N: usize>(
+/// UA and effectiveness computed from a segment-by-segment analysis.
+pub(super) struct UaAndEffectiveness {
+    /// Total heat exchanger conductance.
+    pub ua: ThermalConductance,
+
+    /// Heat exchanger effectiveness (dimensionless, 0 to 1).
+    ///
+    /// Computed as `q_dot / q_dot_max`, where `q_dot_max` is the sum of
+    /// per-segment maximum heat transfer rates.
+    /// Each segment's maximum is `C_min * (T_hot_in - T_cold_in)` for
+    /// that segment's local properties.
+    ///
+    /// This approximation converges to the true effectiveness as the
+    /// segment count increases, resolving internal pinch points that a
+    /// single-segment analysis would miss.
+    pub effectiveness: Effectiveness,
+}
+
+/// Computes total UA and effectiveness using a segment-by-segment
+/// effectiveness-NTU analysis.
+pub(super) fn compute_ua_and_effectiveness<Arrangement, TopFluid, BottomFluid, const N: usize>(
     arrangement: &Arrangement,
     m_dot_top: MassRate,
     m_dot_bottom: MassRate,
     q_dot: HeatTransferRate,
     nodes: &Nodes<TopFluid, BottomFluid, N>,
-) -> Result<ThermalConductance, SolveError>
+) -> Result<UaAndEffectiveness, SolveError>
 where
     Arrangement: DiscretizedArrangement,
 {
     if q_dot == HeatTransferRate::None {
-        return Ok(ThermalConductance::ZERO);
+        return Ok(UaAndEffectiveness {
+            ua: ThermalConductance::ZERO,
+            effectiveness: Effectiveness::new(0.0).expect("zero is valid"),
+        });
     }
 
     let bottom_outlet_index = Arrangement::bottom_select(N - 1, 0);
 
     let mut ua_total = ThermalConductance::ZERO;
+    let mut q_dot_max_total = Power::ZERO;
 
     for i in 0..(N - 1) {
         let top_in = &nodes.top[i];
@@ -108,9 +131,32 @@ where
         })?;
 
         ua_total += ua;
+
+        // Accumulate per-segment maximum heat transfer for effectiveness.
+        // C_min * (T_hot_in - T_cold_in) for this segment's local properties.
+        let c_min = if c_dot_top < c_dot_bottom {
+            *c_dot_top
+        } else {
+            *c_dot_bottom
+        };
+        let segment_q_dot_max = c_min * segment_delta_t_hot_cold.abs();
+        q_dot_max_total += segment_q_dot_max;
     }
 
-    Ok(ua_total)
+    let effectiveness = if q_dot_max_total > Power::ZERO {
+        // Clamp to [0, 1] — floating-point arithmetic across segments can
+        // produce values slightly outside the valid range.
+        (q_dot.magnitude() / q_dot_max_total)
+            .get::<uom::si::ratio::ratio>()
+            .clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    Ok(UaAndEffectiveness {
+        ua: ua_total,
+        effectiveness: Effectiveness::new(effectiveness).expect("clamped to [0, 1]"),
+    })
 }
 
 /// Computes the minimum hot-to-cold temperature difference and its node index.
@@ -212,7 +258,7 @@ mod tests {
         let nodes = Nodes::<_, _, 2>::new::<CounterFlow>(&resolved, &model, &model)
             .expect("discretization should succeed");
 
-        let ua = compute_ua(
+        let metrics = compute_ua_and_effectiveness(
             &CounterFlow,
             resolved.top.m_dot,
             resolved.bottom.m_dot,
@@ -221,6 +267,7 @@ mod tests {
         )
         .expect("metrics should succeed");
 
-        assert_eq!(ua, ThermalConductance::ZERO);
+        assert_eq!(metrics.ua, ThermalConductance::ZERO);
+        assert_eq!(metrics.effectiveness, Effectiveness::new(0.0).unwrap());
     }
 }

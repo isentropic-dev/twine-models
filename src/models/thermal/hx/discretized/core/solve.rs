@@ -10,7 +10,7 @@ pub(super) use resolved::Resolved;
 
 use super::{
     Given, Known, Results,
-    metrics::{compute_min_delta_t, compute_ua},
+    metrics::{compute_min_delta_t, compute_ua_and_effectiveness},
     traits::{DiscretizedArrangement, DiscretizedHxThermoModel},
 };
 
@@ -47,7 +47,7 @@ where
     let min_delta_t = compute_min_delta_t::<Arrangement, _, _, N>(&nodes);
     SolveError::check_second_law(&resolved, min_delta_t)?;
 
-    let ua = compute_ua(
+    let metrics = compute_ua_and_effectiveness(
         &Arrangement::default(),
         resolved.top.m_dot,
         resolved.bottom.m_dot,
@@ -59,7 +59,8 @@ where
         top: nodes.top,
         bottom: nodes.bottom,
         q_dot: resolved.q_dot,
-        ua,
+        ua: metrics.ua,
+        effectiveness: metrics.effectiveness,
         min_delta_t,
     })
 }
