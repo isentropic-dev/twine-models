@@ -8,10 +8,12 @@ pub(crate) mod core;
 pub mod recuperator;
 
 pub use recuperator::{
-    RecuperatorGivenUa, RecuperatorGivenUaConfig, RecuperatorGivenUaError, RecuperatorGivenUaInput,
-    RecuperatorGivenUaOutput,
+    OutletTemp, RecuperatorGivenOutlet, RecuperatorGivenOutletError, RecuperatorGivenOutletInput,
+    RecuperatorGivenOutletOutput, RecuperatorGivenUa, RecuperatorGivenUaConfig,
+    RecuperatorGivenUaError, RecuperatorGivenUaInput, RecuperatorGivenUaOutput,
 };
 
+// TODO: remove when deprecated aliases are dropped in a future breaking release.
 #[allow(deprecated)]
 pub use recuperator::{
     Recuperator, RecuperatorConfig, RecuperatorError, RecuperatorInput, RecuperatorOutput,

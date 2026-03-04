@@ -27,10 +27,9 @@ pub struct Results<TopFluid, BottomFluid, const N: usize> {
 
     /// Heat exchanger effectiveness.
     ///
-    /// Computed from per-segment maximum heat transfer rates, which
-    /// resolves internal pinch points that a single-segment analysis
-    /// would miss.
-    /// Accuracy improves with segment count.
+    /// Computed from per-segment maximum heat transfer rates,
+    /// resolving internal pinch points that a single-segment analysis
+    /// would miss. Accuracy improves with segment count.
     pub effectiveness: Effectiveness,
 
     /// Minimum hot-to-cold temperature difference and its node.

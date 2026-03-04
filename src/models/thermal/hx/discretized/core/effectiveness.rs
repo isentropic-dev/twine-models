@@ -2,8 +2,11 @@ use std::{error::Error, fmt};
 
 /// Heat exchanger effectiveness (dimensionless, 0 to 1).
 ///
-/// The ratio of actual heat transfer to the maximum possible
-/// heat transfer given the operating conditions.
+/// The ratio of actual heat transfer to the maximum possible heat
+/// transfer, computed from per-segment maximum heat transfer rates.
+/// This resolves internal pinch points that the classical single-segment
+/// `ε = q / (C_min · ΔT_inlet)` definition would miss.
+/// The approximation converges as segment count increases.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Effectiveness(f64);
 

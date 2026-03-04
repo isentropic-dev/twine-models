@@ -144,14 +144,18 @@ where
     }
 
     let effectiveness = if q_dot_max_total > Power::ZERO {
-        (q_dot.magnitude() / q_dot_max_total).get::<uom::si::ratio::ratio>()
+        // Clamp to [0, 1] — floating-point arithmetic across segments can
+        // produce values slightly outside the valid range.
+        (q_dot.magnitude() / q_dot_max_total)
+            .get::<uom::si::ratio::ratio>()
+            .clamp(0.0, 1.0)
     } else {
         0.0
     };
 
     Ok(UaAndEffectiveness {
         ua: ua_total,
-        effectiveness: Effectiveness::new(effectiveness).expect("q_dot / q_dot_max is in [0, 1]"),
+        effectiveness: Effectiveness::new(effectiveness).expect("clamped to [0, 1]"),
     })
 }
 
