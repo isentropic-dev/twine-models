@@ -4,17 +4,6 @@
 //! the top stream outlet temperature until the achieved conductance converges
 //! to the desired value.
 
-/// Temperature threshold (in kelvin) for distinguishing FP noise from real
-/// heat transfer at the bisection bracket boundary.
-///
-/// When the candidate top outlet temperature is within this distance of the
-/// top inlet temperature, any `SecondLawViolation` is treated as numerical
-/// noise (UA ≈ 0) rather than a genuine overshoot.
-///
-/// The value is three orders of magnitude below the solver's default
-/// temperature tolerance (1e-6 K), so it won't interfere with real solutions.
-const INLET_PROXIMITY_THRESHOLD_K: f64 = 1e-9;
-
 mod config;
 mod error;
 mod problem;
@@ -22,7 +11,10 @@ mod problem;
 pub use config::GivenUaConfig;
 pub use error::GivenUaError;
 
-use twine_solvers::equation::{EvalError, bisection};
+use twine_solvers::equation::{
+    bisection,
+    bracket::{Bracket, Sign},
+};
 use uom::{
     ConstZero,
     si::{
@@ -101,25 +93,46 @@ where
     let problem = GivenUaProblem::new(target_ua);
 
     let t_top_in = known.inlets.top.temperature.get::<kelvin>();
+    let t_bottom_in = known.inlets.bottom.temperature.get::<kelvin>();
 
-    let solution = bisection::solve(
+    // Exact equality is intentional — with identical inlet temperatures
+    // the bisection bracket collapses to zero width.
+    #[allow(clippy::float_cmp)]
+    if t_top_in == t_bottom_in {
+        return Err(GivenUaError::EqualInletTemperatures);
+    }
+
+    // The bracket is known from physics without evaluation:
+    // - At T_out = T_top_in: no heat transfer, UA = 0, residual is negative.
+    // - At T_out = T_bottom_in: infinite UA (or second-law violation), residual is positive.
+    // Bracket requires left < right, so order by value and assign signs
+    // based on which endpoint is which.
+    let bracket = if t_top_in < t_bottom_in {
+        Bracket::new((t_top_in, Sign::Negative), (t_bottom_in, Sign::Positive))
+    } else {
+        Bracket::new((t_bottom_in, Sign::Positive), (t_top_in, Sign::Negative))
+    }
+    .expect("bracket is valid: endpoints differ and signs oppose");
+
+    let solution = bisection::solve_from_bracket(
         &model,
         &problem,
-        [t_top_in, known.inlets.bottom.temperature.get::<kelvin>()],
+        bracket,
         &config.bisection(),
         |event: &bisection::Event<'_, _, _>| {
-            if let Err(EvalError::Model(SolveError::SecondLawViolation { .. })) = event.result() {
-                // Near the top inlet temperature, a second-law violation is
-                // floating-point noise — heat transfer is essentially zero,
-                // so UA ≈ 0 and the residual is negative.
-                // Farther away, it's a genuine overshoot — the candidate
-                // outlet temperature exceeds physical limits.
-                let near_inlet = (event.x() - t_top_in).abs() < INLET_PROXIMITY_THRESHOLD_K;
-                return Some(if near_inlet {
-                    bisection::Action::assume_negative()
-                } else {
-                    bisection::Action::assume_positive()
-                });
+            // A second-law violation during midpoint iteration is a
+            // genuine overshoot — the candidate outlet temperature
+            // exceeds physical limits, so UA is overestimated.
+            // Other model errors (thermo backend failures, etc.)
+            // are not recoverable and propagate as solver failures.
+            if matches!(
+                event,
+                bisection::Event::ModelFailed {
+                    error: SolveError::SecondLawViolation { .. },
+                    ..
+                }
+            ) {
+                return Some(bisection::Action::assume_positive());
             }
             None
         },

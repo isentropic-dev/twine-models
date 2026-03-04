@@ -211,6 +211,13 @@ pub enum RecuperatorGivenUaError {
         iterations: Option<usize>,
     },
 
+    /// The inlet temperatures are equal.
+    ///
+    /// The solver brackets the outlet temperature between the two inlet
+    /// temperatures. When they are equal, no bracket can be formed.
+    #[error("equal inlet temperatures: solver cannot form a search bracket")]
+    EqualInletTemperatures,
+
     /// The target UA is negative.
     #[error("target UA must be non-negative, got {0:?}")]
     NegativeUa(ThermalConductance),
@@ -343,6 +350,7 @@ impl From<GivenUaError> for RecuperatorGivenUaError {
                 message: error.to_string(),
                 iterations: None,
             },
+            GivenUaError::EqualInletTemperatures => Self::EqualInletTemperatures,
             GivenUaError::MaxIters { iters, .. } => Self::Convergence {
                 message: "iteration limit reached".to_owned(),
                 iterations: Some(iters),
