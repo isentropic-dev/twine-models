@@ -6,8 +6,8 @@ use uom::si::f64::{TemperatureInterval, ThermalConductance};
 
 use crate::{
     models::thermal::hx::discretized::core::{
-        DiscretizedHx, DiscretizedHxThermoModel, GivenUaConfig, GivenUaError, GivenUaResults,
-        Inlets, Known, MassFlows, MinDeltaT, PressureDrops,
+        DiscretizedHx, DiscretizedHxThermoModel, Effectiveness, GivenUaConfig, GivenUaError,
+        GivenUaResults, Inlets, Known, MassFlows, MinDeltaT, PressureDrops,
     },
     support::{hx::arrangement::CounterFlow, thermo::State},
 };
@@ -170,6 +170,9 @@ pub struct RecuperatorOutput<Fluid> {
     /// Achieved overall thermal conductance.
     pub ua: ThermalConductance,
 
+    /// Heat exchanger effectiveness.
+    pub effectiveness: Effectiveness,
+
     /// Minimum hot-to-cold temperature difference and its location.
     pub min_delta_t: MinDeltaT,
 
@@ -281,6 +284,7 @@ impl<Fluid, Thermo> Recuperator<Fluid, Thermo> {
             bottom_outlet: results.bottom[0].clone(),
             q_dot: results.q_dot,
             ua: results.ua,
+            effectiveness: results.effectiveness,
             min_delta_t: results.min_delta_t,
             iterations: given_ua_results.iterations,
         }
