@@ -13,12 +13,6 @@ pub use recuperator::{
     RecuperatorGivenUaError, RecuperatorGivenUaInput, RecuperatorGivenUaOutput,
 };
 
-// TODO: remove when deprecated aliases are dropped in a future breaking release.
-#[allow(deprecated)]
-pub use recuperator::{
-    Recuperator, RecuperatorConfig, RecuperatorError, RecuperatorInput, RecuperatorOutput,
-};
-
 pub use core::{
     Effectiveness, EffectivenessError, HeatTransferRate, Inlets, MassFlows, MinDeltaT,
     PressureDrops,
