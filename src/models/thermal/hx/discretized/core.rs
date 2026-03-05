@@ -8,7 +8,6 @@
 // Dead code warnings are expected until adapters consume this API.
 #![allow(dead_code)]
 
-mod effectiveness;
 mod given_ua;
 mod heat_transfer_rate;
 mod input;
@@ -20,7 +19,6 @@ mod traits;
 #[cfg(test)]
 pub(crate) mod test_support;
 
-pub use effectiveness::{Effectiveness, EffectivenessError};
 pub use given_ua::{GivenUaConfig, GivenUaError, GivenUaResults};
 pub use heat_transfer_rate::HeatTransferRate;
 pub use input::{Given, Inlets, Known, MassFlows, PressureDrops};

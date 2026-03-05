@@ -3,7 +3,7 @@
 use crate::support::thermo::State;
 use uom::si::f64::{TemperatureInterval, ThermalConductance};
 
-use super::{Effectiveness, HeatTransferRate};
+use super::HeatTransferRate;
 
 /// Node states and performance metrics for a discretized heat exchanger.
 ///
@@ -24,13 +24,6 @@ pub struct Results<TopFluid, BottomFluid, const N: usize> {
 
     /// Total heat exchanger conductance.
     pub ua: ThermalConductance,
-
-    /// Heat exchanger effectiveness.
-    ///
-    /// Computed from per-segment maximum heat transfer rates,
-    /// resolving internal pinch points that a single-segment analysis
-    /// would miss. Accuracy improves with segment count.
-    pub effectiveness: Effectiveness,
 
     /// Minimum hot-to-cold temperature difference and its node.
     pub min_delta_t: MinDeltaT,

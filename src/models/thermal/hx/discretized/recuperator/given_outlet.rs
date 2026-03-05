@@ -6,8 +6,8 @@ use uom::si::f64::{ThermalConductance, ThermodynamicTemperature};
 
 use crate::{
     models::thermal::hx::discretized::core::{
-        DiscretizedHx, DiscretizedHxThermoModel, Effectiveness, Given, HeatTransferRate, Inlets,
-        Known, MassFlows, MinDeltaT, PressureDrops, Results, SolveError,
+        DiscretizedHx, DiscretizedHxThermoModel, Given, HeatTransferRate, Inlets, Known, MassFlows,
+        MinDeltaT, PressureDrops, Results, SolveError,
     },
     support::{hx::arrangement::CounterFlow, thermo::State},
 };
@@ -95,9 +95,6 @@ pub struct RecuperatorGivenOutletOutput<Fluid> {
 
     /// Computed overall thermal conductance.
     pub ua: ThermalConductance,
-
-    /// Heat exchanger effectiveness.
-    pub effectiveness: Effectiveness,
 
     /// Minimum hot-to-cold temperature difference and its location.
     pub min_delta_t: MinDeltaT,
@@ -188,7 +185,6 @@ impl<Fluid, Thermo> RecuperatorGivenOutlet<Fluid, Thermo> {
             bottom_outlet: results.bottom[0].clone(),
             q_dot: results.q_dot,
             ua: results.ua,
-            effectiveness: results.effectiveness,
             min_delta_t: results.min_delta_t,
         }
     }
@@ -329,10 +325,6 @@ mod tests {
             out.ua.get::<watt_per_kelvin>() > 0.0,
             "UA should be positive"
         );
-        assert!(
-            out.effectiveness.get() > 0.0 && out.effectiveness.get() < 1.0,
-            "effectiveness should be between 0 and 1 exclusive",
-        );
     }
 
     #[test]
@@ -351,10 +343,6 @@ mod tests {
             out.ua.get::<watt_per_kelvin>() > 0.0,
             "UA should be positive"
         );
-        assert!(
-            out.effectiveness.get() > 0.0 && out.effectiveness.get() < 1.0,
-            "effectiveness should be between 0 and 1 exclusive",
-        );
     }
 
     #[test]
@@ -368,7 +356,7 @@ mod tests {
         assert_relative_eq!(out.ua.get::<watt_per_kelvin>(), 0.0);
         assert_relative_eq!(out.top_outlet.temperature.get::<kelvin>(), 400.0);
         assert_relative_eq!(out.bottom_outlet.temperature.get::<kelvin>(), 600.0);
-        assert_relative_eq!(out.effectiveness.get(), 0.0);
+        assert_eq!(out.q_dot, HeatTransferRate::None);
     }
 
     #[test]
