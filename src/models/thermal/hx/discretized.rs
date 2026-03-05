@@ -13,7 +13,4 @@ pub use recuperator::{
     RecuperatorGivenUaError, RecuperatorGivenUaInput, RecuperatorGivenUaOutput,
 };
 
-pub use core::{
-    Effectiveness, EffectivenessError, HeatTransferRate, Inlets, MassFlows, MinDeltaT,
-    PressureDrops,
-};
+pub use core::{HeatTransferRate, Inlets, MassFlows, MinDeltaT, PressureDrops};
