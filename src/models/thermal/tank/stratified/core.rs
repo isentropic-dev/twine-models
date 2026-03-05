@@ -16,8 +16,8 @@ use thiserror::Error;
 use uom::{
     ConstZero,
     si::f64::{
-        HeatCapacity, Ratio, TemperatureInterval, ThermalConductance, ThermalConductivity,
-        ThermodynamicTemperature, Time, Volume, VolumeRate,
+        HeatCapacity, HeatTransfer, Ratio, TemperatureInterval, ThermalConductance,
+        ThermalConductivity, ThermodynamicTemperature, Time, Volume, VolumeRate,
     },
 };
 
@@ -386,21 +386,20 @@ fn node_ua<const N: usize>(
 ) -> Adjacent<ThermalConductance> {
     let node = node_geometries[i];
 
+    let (u_bottom, u_side, u_top) = match insulation {
+        Insulation::Adiabatic => (HeatTransfer::ZERO, HeatTransfer::ZERO, HeatTransfer::ZERO),
+        Insulation::UValue { bottom, side, top } => (bottom, side, top),
+    };
+
     Adjacent {
         bottom: if i == 0 {
-            match insulation {
-                Insulation::Adiabatic => ThermalConductance::ZERO,
-            }
+            u_bottom * node.area.bottom
         } else {
             ua_between_nodes(k, node_geometries[i - 1], node)
         },
-        side: match insulation {
-            Insulation::Adiabatic => ThermalConductance::ZERO,
-        },
+        side: u_side * node.area.side,
         top: if i == n - 1 {
-            match insulation {
-                Insulation::Adiabatic => ThermalConductance::ZERO,
-            }
+            u_top * node.area.top
         } else {
             ua_between_nodes(k, node, node_geometries[i + 1])
         },
@@ -415,7 +414,11 @@ mod tests {
 
     use approx::assert_relative_eq;
     use uom::si::{
-        f64::{Length, MassDensity, Power, SpecificHeatCapacity, ThermalConductivity, VolumeRate},
+        f64::{
+            HeatTransfer, Length, MassDensity, Power, SpecificHeatCapacity, ThermalConductivity,
+            VolumeRate,
+        },
+        heat_transfer::watt_per_square_meter_kelvin,
         length::meter,
         mass_density::kilogram_per_cubic_meter,
         power::kilowatt,
@@ -516,5 +519,99 @@ mod tests {
         assert_relative_eq!(k_per_s(out.derivatives[0]), 0.0);
         assert_relative_eq!(k_per_s(out.derivatives[1]), 0.0);
         assert_relative_eq!(k_per_s(out.derivatives[2]), 0.005);
+    }
+
+    #[test]
+    fn insulation_type_affects_thermal_response() {
+        let fluid = Fluid {
+            density: MassDensity::new::<kilogram_per_cubic_meter>(1000.0),
+            specific_heat: SpecificHeatCapacity::new::<kilojoule_per_kilogram_kelvin>(4.0),
+            thermal_conductivity: ThermalConductivity::ZERO,
+        };
+
+        let geometry = Geometry::VerticalCylinder {
+            diameter: Length::new::<meter>((4.0 / PI).sqrt()),
+            height: Length::new::<meter>(3.0),
+        };
+
+        let aux_locations = [Location::tank_top()];
+        let port_locations = [PortLocation {
+            inlet: Location::tank_bottom(),
+            outlet: Location::tank_top(),
+        }];
+
+        // Create two identical tanks with different insulation
+        // Specify overall heat transfer coefficients (U-values) in W/(m²·K).
+        // Geometry: vertical cylinder with diameter = sqrt(4/π), height = 3.0
+        // For 3 nodes (each 1m height, so areas are: bottom = 1 m², side ≈ 3.545 m², top = 1 m²)
+        //
+        // These U-values, when multiplied by surface areas, produce UA values:
+        //   - u_bottom = 2000 W/(m²·K) → UA = 2000 * 1 = 2000 W/K (bottom/top surfaces)
+        //   - u_side ≈ 564 W/(m²·K) → UA = 564 * 3.545 ≈ 2000 W/K (side surfaces)
+        let u_bottom = HeatTransfer::new::<watt_per_square_meter_kelvin>(2000.0);
+        let u_side =
+            HeatTransfer::new::<watt_per_square_meter_kelvin>(2000.0 / (PI * (4.0 / PI).sqrt()));
+        let u_top = HeatTransfer::new::<watt_per_square_meter_kelvin>(2000.0);
+
+        let insulation_adiabatic = Insulation::Adiabatic;
+        let insulation_u_value = Insulation::u_value(u_bottom, u_side, u_top);
+
+        let tank_adiabatic = StratifiedTank::new(
+            fluid,
+            geometry.clone(),
+            insulation_adiabatic,
+            aux_locations,
+            port_locations,
+        )
+        .unwrap();
+        let tank_u_value = StratifiedTank::new(
+            fluid,
+            geometry.clone(),
+            insulation_u_value,
+            aux_locations,
+            port_locations,
+        )
+        .unwrap();
+
+        // Setup identical inputs with environmental temperature gradient
+        let t_hot = ThermodynamicTemperature::new::<degree_celsius>(50.0);
+        let t_cold = ThermodynamicTemperature::new::<degree_celsius>(10.0);
+
+        let input = StratifiedTankInput {
+            temperatures: [t_hot; 3],
+            port_flows: zero_port_flows(),
+            aux_heat_flows: [AuxHeatFlow::None],
+            environment: Environment {
+                bottom: t_cold,
+                side: t_cold,
+                top: t_cold,
+            },
+        };
+
+        // Evaluate both tanks
+        let out_adiabatic = tank_adiabatic.evaluate(&input);
+        let out_u_value = tank_u_value.evaluate(&input);
+
+        // Adiabatic tank should have zero derivatives (no heat loss)
+        for deriv in out_adiabatic.derivatives {
+            assert_relative_eq!(k_per_s(deriv), 0.0, max_relative = 1e-10);
+        }
+
+        // U-value tank: heat loss through external insulation
+        // With k=0 for fluid, internal node-to-node conduction is zero.
+        // Only external surfaces conduct to environment.
+        // dT/dt = UA_ext * ΔT / (V * ρ * cp)
+        // Heat capacity = V * ρ * cp = 1 m³ * 1000 kg/m³ * 4 kJ/(kg·K) = 4000 kJ/K = 4e6 J/K
+        // ΔT = 50°C - 10°C = 40 K
+        //
+        // Node 0 (bottom): UA_external = 2000 W/K (bottom) + 2000 W/K (side) = 4000 W/K
+        //   dT/dt = 4000 * 40 / 4e6 = -0.04 K/s
+        // Node 1 (middle): UA_external = 2000 W/K (side only)
+        //   dT/dt = 2000 * 40 / 4e6 = -0.02 K/s
+        // Node 2 (top): UA_external = 2000 W/K (side) + 2000 W/K (top) = 4000 W/K
+        //   dT/dt = 4000 * 40 / 4e6 = -0.04 K/s
+        assert_relative_eq!(k_per_s(out_u_value.derivatives[0]), -0.04);
+        assert_relative_eq!(k_per_s(out_u_value.derivatives[1]), -0.02);
+        assert_relative_eq!(k_per_s(out_u_value.derivatives[2]), -0.04);
     }
 }
